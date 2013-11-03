@@ -310,9 +310,9 @@ private:
                 next = new SongList(_node);
         }
         void add() {
+            control->addAlbum(node);
             if (next)
                 next->add();
-            control->addAlbum(node);
         };
     };
     SongList *sl;

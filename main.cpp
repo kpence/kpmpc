@@ -85,9 +85,10 @@ public:
         return (ret);
     };
     unsigned int getBottomY() {
-        if (next)
-            return (next->getBottomY());
-        return (getY());
+        if (!next)
+            return (getY());
+        return (next->getBottomY());
+        //cout << next->getBottomY() << endl;
     };
     unsigned int getNum() {
         return (num);
@@ -337,11 +338,15 @@ public:
     };
     unsigned int getColNum() {
     // returns the number of collumns of albums that will be displayed
-        return (ceil(getViewWidth() / 160));
+        if (ceil(getViewWidth() / 160) > 0)
+            return (ceil(getViewWidth() / 160));
+        return 1;
     };
     unsigned int getRowNum() {
     // returns the number of rows of albums that will be displayed
-        return (ceil(getViewHeight() / 160));
+        if (ceil(getViewHeight() / 160) > 0)
+            return (ceil(getViewHeight() / 160));
+        return 1;
     };
     void initDraw(int &argc, char **argv);
     void selPrev() {
@@ -401,6 +406,9 @@ public:
         return (albums->getBottomY());
     };
     unsigned int getBottomViewY() { // returns the minimum Y position of view
+        cout << "getting bottom view y" << endl;
+        if ((getBottomY() - getRowNum() + 1) > 3000000000)
+            return 0;
         return (getBottomY() - getRowNum() + 1);
     };
     void play() { // Makes mpd start playing the playlist
@@ -597,10 +605,23 @@ void Draw::initLoop() {
             }
         }
         app->Clear();
-        while ((control->getSelY() - getViewY()) >= (control->getRowNum() - 1) && getViewY() < control->getBottomViewY())
+        unsigned int botY = control->getBottomViewY();
+        while ((control->getSelY() - getViewY()) >= (control->getRowNum() - 1) && (control->getSelY() - getViewY()) < (3000000000) && getViewY() < botY) {
             viewY++;
-        while (control->getSelY() - getViewY() <= 0 && getViewY() > 0)
+            cout << "View up and sel y: " << control->getSelY() << endl;
+            cout << "info: " << (control->getSelY() - getViewY()) << endl;
+            while (getViewY() > botY) {
+                viewY = botY;
+            }
+        }
+        while (getViewY() > botY) {
+            viewY = botY;
+        }
+        while (control->getSelY() - getViewY() <= 0 && getViewY() > 0) {
             viewY--;
+            cout << "View down" << endl;
+        }
+        //getViewY() > control->getBottomViewY()
         control->drawSprs();
         app->Display(); // Display the result
     }

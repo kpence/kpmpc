@@ -1,24 +1,20 @@
-//
-/* (i)ncludes */
+// KPMPC see LICENSE for copyright information (MIT license)
+/* includes */
 #include <iostream>
 #include <cmath>
 #include <cstring>
-//#include <GL/glew.h> // http://ogldev.atspace.co.uk/www/tutorial02/tutorial02.html
-//#include <GL/gl.h>
-//#include <GL/glext.h> // http://www.cs.mun.ca/~blangdon/opengl/glDrawPixels.html
-//#include <GL/freeglut.h> // http://www.opengl-tutorial.org/beginners-tutorials/tutorial-1-opening-a-window/
 #include <mpd/client.h> // http://libmpdclient.sourcearchive.com/documentation/2.1-1/example_8c-source.html
 #include <fstream>
-//#include <jpeglib.h>
-//#include <png.h>
-#include <fstream>
-//#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-//#include <SFML/Image.hpp>
+#include <SFML/Graphics.hpp> //http://www.sfml-dev.org/documentation/1.6/index.php
 #include <boost/filesystem.hpp>
+/* constants */
 #define MPD_MUSIC_DIR "/var/lib/mpd/music/"
 #define SPR_PLACEHOLDER "/home/kpence/music/mpd/placeholder.jpg"
-//
+#define WIN_WIDTH_FLOAT 800.f
+#define WIN_HEIGHT_FLOAT 600.f
+#define WIN_WIDTH 800
+#define WIN_HEIGHT 600
+/* using */
 using std::cout;
 using std::cin;
 using std::endl;
@@ -84,10 +80,8 @@ public:
         if (next) {
             next->num = num + 1;
             ret = next->mkAlbum(_name);
-        } else {
+        } else
             ret = next = new Album(_name);
-            cout << num << endl;
-        }
         return (ret);
     };
     unsigned int getBottomY() {
@@ -100,22 +94,14 @@ public:
     };
     void setNum();
     void setNum(unsigned int _num);
-    void printDir(bool recurs) {
-        if (next && recurs)
-            next->printDir(recurs);
-        cout << "Album (#" << getNum() << ") title: " << getName() << endl;
-        cout << "   Path: " << getDir() << endl;
-        cout << "x: " << getX() << endl;
-        cout << "y: " << getY() << endl;
-    };
+    void printDir(bool recurs);
     void printDir() {
         printDir(false);
     };
-    unsigned int getX() {
-        return (num % 5);
-    };
+    unsigned int getX();
+    unsigned int getY(bool fromView);
     unsigned int getY() {
-        return (floor(num / 5));
+        return (getY(false));
     };
     bool isImg() {
         if (strcmp(imgDir, "<No image>") == 0)
@@ -135,7 +121,7 @@ public:
     sf::Sprite *getSpr() {
         return (spr);
     };
-    void drawImg();
+    void setImg();
     void drawSpr();
 };
 class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
@@ -179,7 +165,7 @@ public:
     Draw() {
         viewY = 0;
         running = true;
-        app = new sf::RenderWindow(sf::VideoMode(800, 600, 32), "KPMPC");
+        app = new sf::RenderWindow(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT, 32), "KPMPC");
         event = new sf::Event();
         setKeys();
         //initLoop();
@@ -339,7 +325,6 @@ public:
         cout << "Cleared playlist" << endl;
         addAlbum(sel);
     };
-    //void add
     bool isFirst(Album *_album) {
         if (_album == albums)
             return true;
@@ -350,12 +335,14 @@ public:
             return true;
         return false;
     };
-    //void loadPlaceholder(const char *path) {
-        //placeholder.LoadFromFile(path);
-    //};
-    //sf::Image getPlaceholder() {
-    //    return (placeholder);
-    //};
+    unsigned int getColNum() {
+    // returns the number of collumns of albums that will be displayed
+        return (ceil(getViewWidth() / 160));
+    };
+    unsigned int getRowNum() {
+    // returns the number of rows of albums that will be displayed
+        return (ceil(getViewHeight() / 160));
+    };
     void initDraw(int &argc, char **argv);
     void selPrev() {
         if (sel != albums)
@@ -389,51 +376,52 @@ public:
             cout << "Control instantiated and updated" << endl;
             update(MPD_TAG_ALBUM, "");
         }
-        //loadPlaceholder(SPR_PLACEHOLDER);
     };
     ~Control() {
         delete draw;
         delete albums;
-        //delete [] path;
         albums = NULL;
         mpd_connection_free(conn);
         conn = NULL;
         cout << "\n~Good bye~\n" << endl;
     };
-    unsigned int getSelY() {
+    float getViewHeight() { // returns height of view in pixels
+        return (draw->getHeight());
+    };
+    float getViewWidth() { // returns width of view in pixels
+        return (draw->getWidth());
+    };
+    unsigned int getSelY() { // returns the Y position of the selected album
         return (sel->getY());
     };
-    unsigned int getSelX() {
+    unsigned int getSelX() { // returns the X position of the selected album
         return (sel->getX());
     };
-    unsigned int getBottomY() {
-        unsigned int ret = albums->getBottomY();
-        return (ret);
+    unsigned int getBottomY() { // returns the Y position of the last album in the album list
+        return (albums->getBottomY());
     };
-    unsigned int getBottomViewY() {
-        return (getBottomY() - 4);
+    unsigned int getBottomViewY() { // returns the minimum Y position of view
+        return (getBottomY() - getRowNum() + 1);
     };
-    void play() {
+    void play() { // Makes mpd start playing the playlist
         mpd_run_play(conn);
     };
-    void drawSprs() {
-        //cout << "drawing control" << endl;
+    void drawSprs() { // recursively draws all the album's art
         albums->drawSpr();
     };
-    void drawSpr(sf::Sprite *spr) {
-        //cout << "drawing control" << endl;
+    void drawSpr(sf::Sprite *spr) { //
         draw->drawSpr(spr);
     };
-    void loadImg() {
+    void loadImg() { //
         albums->loadImg();
     };
-    bool isErr() {
+    bool isErr() { // Checks for error
         return (errStatus);
     };
-    Draw *getDraw() {
+    Draw *getDraw() { // returns pointer to Draw class
         return (draw);
     };
-    char *getDir(char *_album) {
+    char *getDir(char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
         char *path;
         path = new char[255];
         mpd_song *song;
@@ -462,11 +450,11 @@ public:
         }
         return path;
     };
-    void printDirs() {
+    void printDirs() { // recursively prints all album info
         albums->printDir(true);
     };
-    void drawImgs() {
-        albums->drawImg();
+    void setImgs() { // recursively set's the album's sprites to cover art image
+        albums->setImg();
     };
 }; //End of Control
 Control::SongList::~SongList() {
@@ -475,10 +463,10 @@ Control::SongList::~SongList() {
     if (control->sl == this)
         control->sl = NULL;
 };
-char *Album::getName() {
+char *Album::getName() { // returns name of album
     return (name);
 }
-char *Album::getDir() {
+char *Album::getDir() { // returns directory of album
     if (!dir)
         dir = control->getDir(getName());
     int index = 0;
@@ -489,38 +477,44 @@ char *Album::getDir() {
     dir[index] = '\0';
     return (dir);
 }
+unsigned int Album::getX() { // Returns the X position of album
+    return (num % control->getColNum());
+}
+unsigned int Album::getY(bool fromView) { // Returns the Y position of album
+    if (fromView)
+        return (floor(num / control->getColNum()) - control->getDraw()->getViewY());
+    return (floor(num / control->getColNum()));
+}
 void Album::setNum(unsigned int _num) {
     num = _num;
 }
 void Album::setNum() {
-    //if (control->isFirst(this)) {
-        //setNum(0);
-    //}
     if (next) {
         next->setNum(num + 1);
-        cout << "num: " << num  << endl;
         next->setNum();
     }
 }
-void Album::drawImg() {
+void Album::printDir(bool recurs) {
+    if (next && recurs)
+        next->printDir(recurs);
+    cout << "Album (#" << getNum() << ") title: " << getName() << endl;
+    cout << "   Path: " << getDir() << endl;
+    cout << "x, y: " << getX() << ", " << getY() << " / row, column: " << control->getColNum() << ", " << control->getRowNum() << endl;
+    cout << "view: " << control->getDraw()->getViewY() << " / " << control->getBottomViewY() <<endl;
+    cout << "bottom Y: " << control->getBottomY() << endl;
+}
+void Album::setImg() {
     if (next)
-        next->drawImg();
+        next->setImg();
     if (strcmp(imgDir, "<No image>") != 0) {
         cout << "drawing: " << endl;
         printDir(false);
-        spr->SetScale(control->getDraw()->getWidth() / 5 / img->GetWidth(), control->getDraw()->getHeight() / 5 / img->GetHeight());
-        /*
-        spr->Move(10, 5);
-        spr->Rotate(90);
-        spr->Scale(1.5f, 1.5f);*/
         spr->SetImage(*img);
     }
 }
 void Album::drawSpr() {
-    //if (strcmp(imgDir, "<No image>") != 0)
-    //    spr->SetImage(control->getPlaceholder());
-    //spr->SetScale(control->getDraw()->getWidth() / 5 / img->GetWidth(), control->getDraw()->getHeight() / 5 / img->GetHeight());
-    spr->SetPosition(0.f + spr->GetSize().x * (num % 5), 0.f + spr->GetSize().y * (floor(num / 5) - control->getDraw()->getViewY()));
+    spr->SetScale(WIN_WIDTH_FLOAT / control->getColNum() / img->GetWidth(), WIN_HEIGHT_FLOAT / control->getRowNum() / img->GetHeight());
+    spr->SetPosition(0.f + (spr->GetSize().x * getX()), 0.f + (spr->GetSize().y * getY(true)));
     spr->SetColor(sf::Color(255, 255, 255, 255));
     if (control->isSel(this)) {
         spr->SetColor(sf::Color(255, 255, 255, 128));
@@ -531,7 +525,6 @@ void Album::drawSpr() {
         control->drawSpr(spr);
 }
 bool Album::loadImg() {
-    cout << "Loading image..." << endl;
     if (next) {
         next->loadImg();
     }
@@ -555,7 +548,7 @@ bool Album::loadImg() {
 void Control::initDraw(int &argc, char **argv) {
     //draw = new Draw(argc, argv);
     draw = new Draw();
-    drawImgs();
+    setImgs();
     cout << "Gonna do loop" << endl;
     draw->initLoop();
 }
@@ -586,13 +579,13 @@ void Draw::initLoop() {
                 }
             }
             // Using Event for binding
-            if (testEvent(keyCmd["Up"], event)) { // You can use a function
-                for (int i = 0; i < 5; i++) {
+            if (testEvent(keyCmd["Up"], event) && control->getSelY() > 0) { // You can use a function
+                for (unsigned int i = 0; i < control->getColNum(); i++) {
                     control->selPrev();
                 }
             }
-            if (testEvent(keyCmd["Down"], event)) {
-                for (int i = 0; i < 5; i++) {
+            if (testEvent(keyCmd["Down"], event) && control->getSelY() < control->getBottomY()) {
+                for (unsigned int i = 0; i < control->getColNum(); i++) {
                     control->selNext();
                 }
             }
@@ -604,9 +597,9 @@ void Draw::initLoop() {
             }
         }
         app->Clear();
-        while ((control->getSelY() - viewY) >= 4 && viewY < control->getBottomViewY())
+        while ((control->getSelY() - getViewY()) >= (control->getRowNum() - 1) && getViewY() < control->getBottomViewY())
             viewY++;
-        while ((control->getSelY() - viewY) <= 0 && viewY > 0)
+        while (control->getSelY() - getViewY() <= 0 && getViewY() > 0)
             viewY--;
         control->drawSprs();
         app->Display(); // Display the result

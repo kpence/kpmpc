@@ -1,4 +1,7 @@
 // KPMPC see LICENSE for copyright information (MIT license)
+//
+// In order for this to work I think you'll need mpdclient and SFML 1.6
+//
 /* includes */
 #include <iostream>
 #include <cmath>
@@ -36,6 +39,7 @@ void cleanUp();
 //
 class Album {
 private:
+/* ALBUM */
     unsigned int num;
     sf::Sprite *spr;
     sf::Image *img;
@@ -45,10 +49,13 @@ private:
     char *imgDir;
     float selAnimY;
 protected:
+/* ALBUM */
 public:
+/* ALBUM */
     char *getName();
     char *getDir();
     bool loadImg();
+    bool loadImg(const char *filename, bool _success);
     void selAnim();
     Album(const char *_name) {
         next = NULL;
@@ -127,9 +134,10 @@ public:
     };
     void setImg();
     void drawSpr();
-};
+}; /* END OF ALBUM */
 class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
 private:
+/* DRAW */
     sf::RenderWindow *app;
     unsigned int viewY;
     bool running;
@@ -193,7 +201,9 @@ private:
         return (false);
     };
 protected:
+/* DRAW */
 public:
+/* DRAW */
     void initLoop();
     Draw() {
         viewY = 0;
@@ -223,9 +233,10 @@ public:
         //cout << "draw drawing spr" << endl;
         app->Draw(*spr);
     };
-};
+}; /* END OF DRAW */
 class Control {
 private:
+/* CONTROL */
     mpd_connection *conn;
     //sf::Image placeholder;
     bool errStatus;
@@ -306,7 +317,9 @@ private:
     };
     SongList *sl;
 protected:
+/* CONTROL */
 public:
+/* CONTROL */
     bool addAlbum(char *_album) {
         cout << "running add" << endl;
         return (mpd_run_add(conn, _album));
@@ -464,9 +477,8 @@ public:
     Draw *getDraw() { // returns pointer to Draw class
         return (draw);
     };
-    char *getDir(char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
-        char *path;
-        path = new char[255];
+    char *getDir(const char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
+        char *pathRet = new char[255];
         mpd_song *song;
         if (!mpd_search_db_songs(conn, false)) {
             err();
@@ -481,17 +493,21 @@ public:
             return NULL;
         }
         if ((song = mpd_recv_song(conn)) != NULL)
-            strcpy(path, mpd_song_get_uri(song));
+            strcpy(pathRet, mpd_song_get_uri(song));
+        cout << "5" << endl;
         mpd_song_free(song);
+        cout << "6" << endl;
         if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
             err();
             return NULL;
         }
+        cout << "7" << endl;
         if (!mpd_response_finish(conn)) {
             err();
             return NULL;
         }
-        return path;
+        cout << "8" << endl;
+        return pathRet;
     };
     void printDirs() { // recursively prints all album info
         albums->printDir(true);
@@ -499,7 +515,7 @@ public:
     void setImgs() { // recursively set's the album's sprites to cover art image
         albums->setImg();
     };
-}; //End of Control
+}; /*END OF CONTROL*/
 Control::SongList::~SongList() {
     delete next;
     delete [] node;
@@ -528,16 +544,16 @@ unsigned int Album::getY(bool fromView) { // Returns the Y position of album
         return (floor(num / control->getColNum()) - control->getDraw()->getViewY());
     return (floor(num / control->getColNum()));
 }
-void Album::setNum(unsigned int _num) {
+void Album::setNum(unsigned int _num) { // Sets album's num (Used to determine its X and Y positions)
     num = _num;
 }
-void Album::setNum() {
+void Album::setNum() { // Recusively sets album's num (Used to determine its X and Y positions)
     if (next) {
         next->setNum(num + 1);
         next->setNum();
     }
 }
-void Album::printDir(bool recurs) {
+void Album::printDir(bool recurs) { // Prints album's directory and other information
     if (next && recurs)
         next->printDir(recurs);
     cout << "Album (#" << getNum() << ") title: " << getName() << endl;
@@ -555,7 +571,7 @@ void Album::setImg() {
         spr->SetImage(*img);
     }
 }
-void Album::drawSpr() {
+void Album::drawSpr() { // Draw album's sprite
     spr->SetScale(WIN_WIDTH_FLOAT / control->getColNum() / img->GetWidth(), WIN_HEIGHT_FLOAT / control->getRowNum() / img->GetHeight());
     spr->SetPosition(0.f + (spr->GetSize().x * getX()), 0.f + (spr->GetSize().y * getY(true)));
     spr->SetColor(sf::Color(255, 255, 255, 255));
@@ -568,25 +584,45 @@ void Album::drawSpr() {
     if (strcmp(imgDir, "<No image>") != 0)
         control->drawSpr(spr);
 }
+bool Album::loadImg(const char *filename, bool _success) { // Load album's image
+    if (_success) {
+        return (_success);
+        cout << "!!!!!!!!!!!!!!!!!" << endl << endl;
+    }
+    else {
+        char *_dirTest = new char[255];
+        strcpy(_dirTest, imgDir);
+        strcat(_dirTest, filename);
+        cout << _dirTest << endl;
+        if (img->LoadFromFile(_dirTest))
+            _success = true;
+        delete [] _dirTest;
+        _dirTest = NULL;
+        return (_success);
+    }
+}
 bool Album::loadImg() {
     if (next) {
         next->loadImg();
     }
-    char *dirTest = new char[255];
+    bool success = false;
     if (!imgDir) {
         imgDir = new char[255];
         strcpy(imgDir, MPD_MUSIC_DIR);
         strcat(imgDir, getDir());
     }
-    strcpy(dirTest, imgDir);
-    strcat(dirTest, "front.jpg");
-    if (!img->LoadFromFile(dirTest)) {
+    success = loadImg("front.jpg", success);
+    success = loadImg("front.png", success);
+    success = loadImg("cover.jpg", success);
+    success = loadImg("cover.png", success);
+    success = loadImg("folder.jpg", success);
+    success = loadImg("folder.png", success);
+    if (!success)
         strcpy(imgDir, "<No image>");
-        delete [] dirTest;
+    if (strcmp(imgDir, "<No image>") == 0) {
         return false;
     }
     cout << "[!!!!!!!!!!!!!!!!!!!!!!!] Successful: " << imgDir << endl;
-    delete [] dirTest;
     return true;
 }
 void Album::selAnim() {
@@ -686,8 +722,6 @@ void Draw::initLoop() {
         unsigned int botY = control->getBottomViewY();
         while ((control->getSelY() - getViewY()) >= (control->getRowNum() - 1) && (control->getSelY() - getViewY()) < (3000000000) && getViewY() < botY) {
             viewY++;
-            cout << "View up and sel y: " << control->getSelY() << endl;
-            cout << "info: " << (control->getSelY() - getViewY()) << endl;
             while (getViewY() > botY) {
                 viewY = botY;
             }
@@ -697,7 +731,6 @@ void Draw::initLoop() {
         }
         while (control->getSelY() - getViewY() <= 0 && getViewY() > 0) {
             viewY--;
-            cout << "View down" << endl;
         }
         //getViewY() > control->getBottomViewY()
         control->drawSprs();

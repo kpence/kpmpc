@@ -36,7 +36,7 @@ namespace ctrl {
 };
 using ctrl::control;
 //
-void cleanup();
+void cleanUp();
 //
 class Album {
 private:
@@ -179,10 +179,9 @@ public:
     Draw() {
         viewY = 0;
         running = true;
-        app = new sf::RenderWindow();
+        app = new sf::RenderWindow(sf::VideoMode(800, 600, 32), "KPMPC");
         event = new sf::Event();
         setKeys();
-        app->Create(sf::VideoMode(800, 600, 32), "KPMPC");
         //initLoop();
     };
     ~Draw() {
@@ -409,7 +408,6 @@ public:
     };
     unsigned int getBottomY() {
         unsigned int ret = albums->getBottomY();
-        cout << "Bottom Y:" << ret << endl;
         return (ret);
     };
     unsigned int getBottomViewY() {
@@ -546,8 +544,6 @@ bool Album::loadImg() {
     strcpy(dirTest, imgDir);
     strcat(dirTest, "front.jpg");
     if (!img->LoadFromFile(dirTest)) {
-        //Image1.Create(200, 200, sf::Color(0, 255, 0));
-        //Image2.LoadFromPixels(200, 200, PointerToPixelsInMemory);
         strcpy(imgDir, "<No image>");
         delete [] dirTest;
         return false;
@@ -556,15 +552,6 @@ bool Album::loadImg() {
     delete [] dirTest;
     return true;
 }
-void keyboard(unsigned char key, int x, int y) {
-    switch (key) {
-        case 27: //ESC
-            cleanup();
-            break;
-        default:
-            break;
-    }
-};
 void Control::initDraw(int &argc, char **argv) {
     //draw = new Draw(argc, argv);
     draw = new Draw();
@@ -635,17 +622,17 @@ bool getInput() {
         return false;
     return true;
 };
-void cleanup() {
+void cleanUp() {
     cout << "Cleaning up:" << endl;
     delete control;
    //exit(0);
-}
+};
 // MAIN
 int main(int argc, char **argv) {
     control = new Control();
     control->loadImg();
     control->initDraw(argc, argv);
     //while (getInput());
-    cleanup();
+    cleanUp();
     return 0;
 }

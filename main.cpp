@@ -43,11 +43,13 @@ private:
     char *name;
     char *dir;
     char *imgDir;
+    float selAnimY;
 protected:
 public:
     char *getName();
     char *getDir();
     bool loadImg();
+    void selAnim();
     Album(const char *_name) {
         next = NULL;
         dir = NULL;
@@ -55,6 +57,7 @@ public:
         img = NULL;
         spr = NULL;
         num = 0;
+        selAnimY = 0;
         name = new char[128];
         strcpy(name, _name);
         img = new sf::Image;
@@ -134,22 +137,51 @@ private:
     std::map<std::string, KeyCmd> keyCmd;
     KeyCmd key;
     void setKeys() {
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::J;
-        keyCmd["Down"] = key;
+        //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
         key.keyCode = sf::Key::K;
         keyCmd["Up"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::J;
+        keyCmd["Down"] = key;
+        //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
         key.keyCode = sf::Key::H;
         keyCmd["Left"] = key;
+        //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
         key.keyCode = sf::Key::L;
         keyCmd["Right"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::B;
+        keyCmd["PgUp"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::F;
+        keyCmd["PgDown"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::A;
+        keyCmd["LineBegin"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::E;
+        keyCmd["LineEnd"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::P;
+        keyCmd["Play"] = key;
     };
     bool testEvent(KeyCmd k, sf::Event *e) {
         if (!running)
@@ -396,6 +428,9 @@ public:
     float getViewWidth() { // returns width of view in pixels
         return (draw->getWidth());
     };
+    Album *getSel() { // returns the pointer to the selected album
+        return (sel);
+    };
     unsigned int getSelY() { // returns the Y position of the selected album
         return (sel->getY());
     };
@@ -406,7 +441,6 @@ public:
         return (albums->getBottomY());
     };
     unsigned int getBottomViewY() { // returns the minimum Y position of view
-        cout << "getting bottom view y" << endl;
         if ((getBottomY() - getRowNum() + 1) > 3000000000)
             return 0;
         return (getBottomY() - getRowNum() + 1);
@@ -416,6 +450,7 @@ public:
     };
     void drawSprs() { // recursively draws all the album's art
         albums->drawSpr();
+        albums->selAnim();
     };
     void drawSpr(sf::Sprite *spr) { //
         draw->drawSpr(spr);
@@ -526,6 +561,7 @@ void Album::drawSpr() {
     spr->SetColor(sf::Color(255, 255, 255, 255));
     if (control->isSel(this)) {
         spr->SetColor(sf::Color(255, 255, 255, 128));
+        spr->Move((selAnimY / 10.f) * 4.f, (selAnimY / 10.f) * 4.f);
     }
     if (next)
         next->drawSpr();
@@ -553,6 +589,14 @@ bool Album::loadImg() {
     delete [] dirTest;
     return true;
 }
+void Album::selAnim() {
+    if (next)
+        next->selAnim();
+    if (selAnimY < 10.f && control->isSel(this))
+        selAnimY++;
+    if (selAnimY > 0.f && !control->isSel(this))
+        selAnimY--;
+}
 void Control::initDraw(int &argc, char **argv) {
     //draw = new Draw(argc, argv);
     draw = new Draw();
@@ -573,20 +617,37 @@ void Draw::initLoop() {
             // Key pressed
             if (event->Type == sf::Event::KeyPressed) {
                 switch (event->Key.Code) {
-                    case sf::Key::Escape:
+                    case sf::Key::Q:
                         running = false;
                         break;
-                    case sf::Key::A:
-                        std::cout << "Key A !" << std::endl;
-                        control->addAlbum();
-                        control->addSongList();
-                        control->play();
+                    case sf::Key::Escape:
+                        running = false;
                         break;
                     default:
                         break;
                 }
             }
             // Using Event for binding
+            if (testEvent(keyCmd["LineBegin"], event) && control->getSelY() >= 0) { // You can use a function
+                for (unsigned int i = 0; i < control->getColNum(); i++) {
+                    if (control->getSelX() == 0)
+                        i = control->getColNum();
+                    else
+                        control->selPrev();
+                }
+            }
+            if (testEvent(keyCmd["LineEnd"], event) && control->getSelY() <= control->getBottomY()) { // You can use a function
+                for (unsigned int i = 0; i < control->getColNum(); i++) {
+                    if (!control->getSel()->getNext())
+                        i = control->getColNum();
+                    else {
+                        if (control->getSel()->getNext()->getX() == 0)
+                            i = control->getColNum();
+                        else
+                        control->selNext();
+                    }
+                }
+            }
             if (testEvent(keyCmd["Up"], event) && control->getSelY() > 0) { // You can use a function
                 for (unsigned int i = 0; i < control->getColNum(); i++) {
                     control->selPrev();
@@ -597,11 +658,28 @@ void Draw::initLoop() {
                     control->selNext();
                 }
             }
+            if (testEvent(keyCmd["PgUp"], event) && control->getSelY() > 0) {
+                for (unsigned int i = 0; i < (control->getColNum() * control->getRowNum()); i++) {
+                    if (control->getSelX() == 0 && viewY > 0)
+                        viewY--;
+                    control->selPrev();
+                }
+            }
+            if (testEvent(keyCmd["PgDown"], event) && control->getSelY() < control->getBottomY()) {
+                for (unsigned int i = 0; i < (control->getColNum() * control->getRowNum()); i++) {
+                    control->selNext();
+                }
+            }
             if (testEvent(keyCmd["Left"], event)) {
                 control->selPrev();
             }
             if (testEvent(keyCmd["Right"], event)) {
                 control->selNext();
+            }
+            if (testEvent(keyCmd["Play"], event)) {
+                control->addAlbum();
+                control->addSongList();
+                control->play();
             }
         }
         app->Clear();

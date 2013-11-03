@@ -619,7 +619,7 @@ void Draw::initLoop() {
         app->Clear();
         while ((control->getSelY() - viewY) >= 4 && viewY < control->getBottomViewY())
             viewY++;
-        while ((control->getSelY() - viewY) <= 1 && viewY > 0)
+        while ((control->getSelY() - viewY) <= 0 && viewY > 0)
             viewY--;
         control->drawSprs();
         app->Display(); // Display the result

@@ -41,8 +41,8 @@ void cleanup();
 class Album {
 private:
     unsigned int num;
-    sf::Sprite spr;
-    sf::Image img;
+    sf::Sprite *spr;
+    sf::Image *img;
     Album *next;
     char *name;
     char *dir;
@@ -56,21 +56,28 @@ public:
         next = NULL;
         dir = NULL;
         imgDir = NULL;
+        img = NULL;
+        spr = NULL;
         num = 0;
         name = new char[128];
         strcpy(name, _name);
+        img = new sf::Image;
+        spr = new sf::Sprite;
         cout << "Album instantiated: " << getName() << endl;
     };
     ~Album() {
         cout << "Album deleted: " << getName() << endl;
         delete [] name;
         delete [] dir;
-        delete [] imgDir;
-        //delete img;
-        //delete spr;
+        delete img;
+        delete spr;
         delete next;
+        delete [] imgDir;
         dir = NULL;
         next = NULL;
+        img = NULL;
+        spr = NULL;
+        imgDir = NULL;
     };
     Album *mkAlbum(const char *_name) {
         Album *ret;
@@ -83,6 +90,11 @@ public:
         }
         return (ret);
     };
+    unsigned int getBottomY() {
+        if (next)
+            return (next->getBottomY());
+        return (getY());
+    };
     unsigned int getNum() {
         return (num);
     };
@@ -93,11 +105,17 @@ public:
             next->printDir(recurs);
         cout << "Album (#" << getNum() << ") title: " << getName() << endl;
         cout << "   Path: " << getDir() << endl;
-        cout << "y: " << floor(num / 5) << endl;
-        cout << "x: " << num % 5 << endl;
+        cout << "x: " << getX() << endl;
+        cout << "y: " << getY() << endl;
     };
     void printDir() {
         printDir(false);
+    };
+    unsigned int getX() {
+        return (num % 5);
+    };
+    unsigned int getY() {
+        return (floor(num / 5));
     };
     bool isImg() {
         if (strcmp(imgDir, "<No image>") == 0)
@@ -114,7 +132,7 @@ public:
     Album *getNext() {
         return (next);
     };
-    sf::Sprite getSpr() {
+    sf::Sprite *getSpr() {
         return (spr);
     };
     void drawImg();
@@ -122,9 +140,10 @@ public:
 };
 class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
 private:
-    sf::RenderWindow app;
+    sf::RenderWindow *app;
+    unsigned int viewY;
     bool running;
-    sf::Event event;
+    sf::Event *event;
     std::map<std::string, KeyCmd> keyCmd;
     KeyCmd key;
     void setKeys() {
@@ -145,12 +164,12 @@ private:
         key.keyCode = sf::Key::L;
         keyCmd["Right"] = key;
     };
-    bool testEvent(KeyCmd k, sf::Event e) {
+    bool testEvent(KeyCmd k, sf::Event *e) {
         if (!running)
             return (false);
-        if (k.inputType == INPUT_MOUSE && k.eventType == e.Type && k.mouseButton == e.MouseButton.Button)
+        if (k.inputType == INPUT_MOUSE && k.eventType == e->Type && k.mouseButton == e->MouseButton.Button)
             return (true);
-        if (k.inputType == INPUT_KEYBOARD && k.eventType == e.Type && k.keyCode == e.Key.Code)
+        if (k.inputType == INPUT_KEYBOARD && k.eventType == e->Type && k.keyCode == e->Key.Code)
             return (true);
         return (false);
     };
@@ -158,25 +177,33 @@ protected:
 public:
     void initLoop();
     Draw() {
+        viewY = 0;
         running = true;
+        app = new sf::RenderWindow();
+        event = new sf::Event();
         setKeys();
-        app.Create(sf::VideoMode(800, 600, 32), "KPMPC");
+        app->Create(sf::VideoMode(800, 600, 32), "KPMPC");
         //initLoop();
     };
+    ~Draw() {
+        delete app;
+        delete event;
+    };
+    unsigned int getViewY() {
+        return (viewY);
+    };
     float getWidth() {
-        return(float(app.GetWidth()));
+        return(float(app->GetWidth()));
     };
     float getHeight() {
-        return(float(app.GetHeight()));
-    };
-    ~Draw() {
+        return(float(app->GetHeight()));
     };
     void setTitle(const char *_title) {
         // not sure if you can do this in SFML 1.6 but I'm too lazy to get 2.0
     }
-    void drawSpr(sf::Sprite &spr) {
+    void drawSpr(sf::Sprite *spr) {
         //cout << "draw drawing spr" << endl;
-        app.Draw(spr);
+        app->Draw(*spr);
     };
 };
 class Control {
@@ -346,6 +373,11 @@ public:
         sel->printDir();
         cout << "< / Selecting next DONE >" << endl;
     };
+    bool isSelNext() {
+        if (sel->getNext())
+            return true;
+        return false;
+    };
     Control() {
         cout << "Control instantiating" << endl;
         conn = mpd_connection_new(NULL, 0, 30000);
@@ -369,6 +401,20 @@ public:
         conn = NULL;
         cout << "\n~Good bye~\n" << endl;
     };
+    unsigned int getSelY() {
+        return (sel->getY());
+    };
+    unsigned int getSelX() {
+        return (sel->getX());
+    };
+    unsigned int getBottomY() {
+        unsigned int ret = albums->getBottomY();
+        cout << "Bottom Y:" << ret << endl;
+        return (ret);
+    };
+    unsigned int getBottomViewY() {
+        return (getBottomY() - 4);
+    };
     void play() {
         mpd_run_play(conn);
     };
@@ -376,7 +422,7 @@ public:
         //cout << "drawing control" << endl;
         albums->drawSpr();
     };
-    void drawSpr(sf::Sprite &spr) {
+    void drawSpr(sf::Sprite *spr) {
         //cout << "drawing control" << endl;
         draw->drawSpr(spr);
     };
@@ -464,22 +510,22 @@ void Album::drawImg() {
     if (strcmp(imgDir, "<No image>") != 0) {
         cout << "drawing: " << endl;
         printDir(false);
-        spr.SetScale(control->getDraw()->getWidth() / 5 / img.GetWidth(), control->getDraw()->getHeight() / 5 / img.GetHeight());
+        spr->SetScale(control->getDraw()->getWidth() / 5 / img->GetWidth(), control->getDraw()->getHeight() / 5 / img->GetHeight());
         /*
-        spr.Move(10, 5);
-        spr..Rotate(90);
-        spr.Scale(1.5f, 1.5f);*/
-        spr.SetImage(img);
+        spr->Move(10, 5);
+        spr->Rotate(90);
+        spr->Scale(1.5f, 1.5f);*/
+        spr->SetImage(*img);
     }
 }
 void Album::drawSpr() {
     //if (strcmp(imgDir, "<No image>") != 0)
-    //    spr.SetImage(control->getPlaceholder());
-    //spr.SetScale(control->getDraw()->getWidth() / 5 / img.GetWidth(), control->getDraw()->getHeight() / 5 / img.GetHeight());
-    spr.SetPosition(0.f + spr.GetSize().x * (num % 5), 0.f + spr.GetSize().y * floor(num / 5));
-    spr.SetColor(sf::Color(255, 255, 255, 255));
+    //    spr->SetImage(control->getPlaceholder());
+    //spr->SetScale(control->getDraw()->getWidth() / 5 / img->GetWidth(), control->getDraw()->getHeight() / 5 / img->GetHeight());
+    spr->SetPosition(0.f + spr->GetSize().x * (num % 5), 0.f + spr->GetSize().y * (floor(num / 5) - control->getDraw()->getViewY()));
+    spr->SetColor(sf::Color(255, 255, 255, 255));
     if (control->isSel(this)) {
-        spr.SetColor(sf::Color(255, 255, 255, 128));
+        spr->SetColor(sf::Color(255, 255, 255, 128));
     }
     if (next)
         next->drawSpr();
@@ -499,7 +545,7 @@ bool Album::loadImg() {
     }
     strcpy(dirTest, imgDir);
     strcat(dirTest, "front.jpg");
-    if (!img.LoadFromFile(dirTest)) {
+    if (!img->LoadFromFile(dirTest)) {
         //Image1.Create(200, 200, sf::Color(0, 255, 0));
         //Image2.LoadFromPixels(200, 200, PointerToPixelsInMemory);
         strcpy(imgDir, "<No image>");
@@ -529,16 +575,16 @@ void Control::initDraw(int &argc, char **argv) {
 void Draw::initLoop() {
     while (running) {
         // Manage Events
-        while (app.GetEvent(event)) {
+        while (app->GetEvent(*event)) {
             // Using Event normally
  
             // Window closed
-            if (event.Type == sf::Event::Closed)
+            if (event->Type == sf::Event::Closed)
                 running = false;
  
             // Key pressed
-            if (event.Type == sf::Event::KeyPressed) {
-                switch (event.Key.Code) {
+            if (event->Type == sf::Event::KeyPressed) {
+                switch (event->Key.Code) {
                     case sf::Key::Escape:
                         running = false;
                         break;
@@ -552,7 +598,7 @@ void Draw::initLoop() {
                         break;
                 }
             }
-            // Using Event for binding // Shoot
+            // Using Event for binding
             if (testEvent(keyCmd["Up"], event)) { // You can use a function
                 for (int i = 0; i < 5; i++) {
                     control->selPrev();
@@ -563,18 +609,22 @@ void Draw::initLoop() {
                     control->selNext();
                 }
             }
-            if (testEvent(keyCmd["Left"], event)) { // or only code
+            if (testEvent(keyCmd["Left"], event)) {
                 control->selPrev();
             }
-            if (testEvent(keyCmd["Right"], event)) { // or only code
+            if (testEvent(keyCmd["Right"], event)) {
                 control->selNext();
             }
         }
-        app.Clear();
+        app->Clear();
+        while ((control->getSelY() - viewY) >= 4 && viewY < control->getBottomViewY())
+            viewY++;
+        while ((control->getSelY() - viewY) <= 1 && viewY > 0)
+            viewY--;
         control->drawSprs();
-        app.Display(); // Display the result
+        app->Display(); // Display the result
     }
-    app.Close();
+    app->Close();
 };
 bool getInput() {
     int input;

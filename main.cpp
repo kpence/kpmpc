@@ -17,6 +17,7 @@
 #define WIN_HEIGHT_FLOAT 600.f
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define IS_GUI true
 /* using */
 using std::cout;
 using std::cin;
@@ -54,6 +55,7 @@ public:
 /* ALBUM */
     char *getName();
     char *getDir();
+    char *dirTrim();
     bool loadImg();
     bool loadImg(const char *filename, bool _success);
     void selAnim();
@@ -67,16 +69,20 @@ public:
         selAnimY = 0;
         name = new char[128];
         strcpy(name, _name);
-        img = new sf::Image;
-        spr = new sf::Sprite;
+        if (IS_GUI) {
+            img = new sf::Image;
+            spr = new sf::Sprite;
+        }
         cout << "Album instantiated: " << getName() << endl;
     };
     ~Album() {
         cout << "Album deleted: " << getName() << endl;
         delete [] name;
         delete [] dir;
-        delete img;
-        delete spr;
+        if (IS_GUI) {
+            delete img;
+            delete spr;
+        }
         delete next;
         delete [] imgDir;
         dir = NULL;
@@ -138,10 +144,11 @@ public:
 class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
 private:
 /* DRAW */
+    sf::VideoMode *videoMode;
     sf::RenderWindow *app;
+    sf::Event *event;
     unsigned int viewY;
     bool running;
-    sf::Event *event;
     std::map<std::string, KeyCmd> keyCmd;
     KeyCmd key;
     void setKeys() {
@@ -208,12 +215,17 @@ public:
     Draw() {
         viewY = 0;
         running = true;
-        app = new sf::RenderWindow(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT, 32), "KPMPC");
+        videoMode = new sf::VideoMode(WIN_WIDTH, WIN_HEIGHT, 32);
+        //sf::VideoMode videoMode_;
+        //videoMode_ = sf::VideoMode::GetMode(0);
+        app = new sf::RenderWindow(*videoMode, "KPMPC");
         event = new sf::Event();
         setKeys();
         //initLoop();
     };
     ~Draw() {
+        app->Close();
+        delete videoMode;
         delete app;
         delete event;
     };
@@ -308,8 +320,9 @@ private:
                 next->mkSongList(_node);
             else
                 next = new SongList(_node);
-        }
+        };
         void add() {
+            cout << "Adding song: " << node << endl;
             control->addAlbum(node);
             if (next)
                 next->add();
@@ -428,7 +441,8 @@ public:
         }
     };
     ~Control() {
-        delete draw;
+        if (IS_GUI)
+            delete draw;
         delete albums;
         albums = NULL;
         mpd_connection_free(conn);
@@ -466,7 +480,9 @@ public:
         albums->selAnim();
     };
     void drawSpr(sf::Sprite *spr) { //
-        draw->drawSpr(spr);
+        if (IS_GUI) {
+            draw->drawSpr(spr);
+        }
     };
     void loadImg() { //
         albums->loadImg();
@@ -494,19 +510,15 @@ public:
         }
         if ((song = mpd_recv_song(conn)) != NULL)
             strcpy(pathRet, mpd_song_get_uri(song));
-        cout << "5" << endl;
         mpd_song_free(song);
-        cout << "6" << endl;
         if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
             err();
             return NULL;
         }
-        cout << "7" << endl;
         if (!mpd_response_finish(conn)) {
             err();
             return NULL;
         }
-        cout << "8" << endl;
         return pathRet;
     };
     void printDirs() { // recursively prints all album info
@@ -524,6 +536,19 @@ Control::SongList::~SongList() {
 };
 char *Album::getName() { // returns name of album
     return (name);
+}
+char *Album::dirTrim() { // returns directory of album
+    int index = 0;
+    while (dir[index] != '\0' && index < 254)
+        index++;
+    index--;
+    while (dir[index - 1] != '/' && index > 2)
+        index--;
+    dir[index] = '\0';
+    strcpy(imgDir, MPD_MUSIC_DIR);
+    strcat(imgDir, dir);
+    cout << "Trimmed dir: " << imgDir << endl;
+    return (dir);
 }
 char *Album::getDir() { // returns directory of album
     if (!dir)
@@ -585,6 +610,10 @@ void Album::drawSpr() { // Draw album's sprite
         control->drawSpr(spr);
 }
 bool Album::loadImg(const char *filename, bool _success) { // Load album's image
+    if (!IS_GUI) {
+        cout << "No gui, no loading image" << endl;
+        return (false);
+    }
     if (_success) {
         return (_success);
         cout << "!!!!!!!!!!!!!!!!!" << endl << endl;
@@ -601,7 +630,7 @@ bool Album::loadImg(const char *filename, bool _success) { // Load album's image
         return (_success);
     }
 }
-bool Album::loadImg() {
+bool Album::loadImg() { // Recursively load each album's image
     if (next) {
         next->loadImg();
     }
@@ -617,6 +646,13 @@ bool Album::loadImg() {
     success = loadImg("cover.png", success);
     success = loadImg("folder.jpg", success);
     success = loadImg("folder.png", success);
+    dirTrim();
+    success = loadImg("front.jpg", success);
+    success = loadImg("front.png", success);
+    success = loadImg("cover.jpg", success);
+    success = loadImg("cover.png", success);
+    success = loadImg("folder.jpg", success);
+    success = loadImg("folder.png", success);
     if (!success)
         strcpy(imgDir, "<No image>");
     if (strcmp(imgDir, "<No image>") == 0) {
@@ -625,7 +661,7 @@ bool Album::loadImg() {
     cout << "[!!!!!!!!!!!!!!!!!!!!!!!] Successful: " << imgDir << endl;
     return true;
 }
-void Album::selAnim() {
+void Album::selAnim() { // Animation for when the album is selected or deselected
     if (next)
         next->selAnim();
     if (selAnimY < 10.f && control->isSel(this))
@@ -634,11 +670,13 @@ void Album::selAnim() {
         selAnimY--;
 }
 void Control::initDraw(int &argc, char **argv) {
-    //draw = new Draw(argc, argv);
-    draw = new Draw();
-    setImgs();
-    cout << "Gonna do loop" << endl;
-    draw->initLoop();
+    if (IS_GUI) {
+        //draw = new Draw(argc, argv);
+        draw = new Draw();
+        setImgs();
+        cout << "Gonna do loop" << endl;
+        draw->initLoop();
+    }
 }
 void Draw::initLoop() {
     while (running) {
@@ -736,7 +774,6 @@ void Draw::initLoop() {
         control->drawSprs();
         app->Display(); // Display the result
     }
-    app->Close();
 };
 bool getInput() {
     int input;

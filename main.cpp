@@ -8,15 +8,14 @@
 #include <cstring>
 #include <mpd/client.h> // http://libmpdclient.sourcearchive.com/documentation/2.1-1/example_8c-source.html
 #include <fstream>
+#include "config.h"
 #include <SFML/Graphics.hpp> //http://www.sfml-dev.org/documentation/1.6/index.php
 #include <boost/filesystem.hpp>
 /* constants */
-#define MPD_MUSIC_DIR "/var/lib/mpd/music/"
-#define SPR_PLACEHOLDER "/home/kpence/music/mpd/placeholder.jpg"
-#define WIN_WIDTH_FLOAT 800.f
-#define WIN_HEIGHT_FLOAT 600.f
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
+#define WIN_WIDTH_FLOAT 800.f
+#define WIN_HEIGHT_FLOAT 600.f
 #define IS_GUI true
 /* using */
 using std::cout;
@@ -33,14 +32,52 @@ struct KeyCmd {
 };
 namespace ctrl {
     Control *control;
+    const char config[] = "# list of configurations in README\n music_dir=\n main.exe\n";
 };
 using ctrl::control;
 //
 void cleanUp();
 //
+/////////////////////////////////////////////////////////////////////
+// CONFIG
+/////////////////////////////////////////////////////////////////////
+/*class Config {
+private:  CONFIG 
+    std::string line;
+    const char *config;
+protected:  CONFIG 
+public:  CONFIG 
+    Config() {
+        ifstream myfile ("config");
+        config = ctrl::config;
+    };
+    ~Config() {
+        delete [] config;
+        config = NULL;
+    };
+    void store_line(std::string, std::string) {
+    };
+
+    void readConfig() {
+        if (myfile.is_open()) {
+            while (std::getline(is_file, line)) {
+                std::istringstream is_line(line);
+                std::string key;
+                if (std::getline(is_line, key, '=')) {
+                    std::string value;
+                    if (std::getline(is_line, value))
+                        //store_line(key, value);
+                }
+            }
+            myfile.close();
+        
+    };
+};*/
+/////////////////////////////////////////////////////////////////////
+// ALBUM
+/////////////////////////////////////////////////////////////////////
 class Album {
-private:
-/* ALBUM */
+private: /* ALBUM */
     unsigned int num;
     sf::Sprite *spr;
     sf::Image *img;
@@ -49,10 +86,8 @@ private:
     char *dir;
     char *imgDir;
     float selAnimY;
-protected:
-/* ALBUM */
-public:
-/* ALBUM */
+protected: /* ALBUM */
+public: /* ALBUM */
     char *getName();
     char *getDir();
     char *dirTrim();
@@ -104,7 +139,6 @@ public:
         if (!next)
             return (getY());
         return (next->getBottomY());
-        //cout << next->getBottomY() << endl;
     };
     unsigned int getNum() {
         return (num);
@@ -141,9 +175,11 @@ public:
     void setImg();
     void drawSpr();
 }; /* END OF ALBUM */
+/////////////////////////////////////////////////////////////////////
+// DRAW
+/////////////////////////////////////////////////////////////////////
 class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
-private:
-/* DRAW */
+private: /* DRAW */
     sf::VideoMode *videoMode;
     sf::RenderWindow *app;
     sf::Event *event;
@@ -155,47 +191,57 @@ private:
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::K;
+        key.keyCode = sf::Key::UP_KEY;
         keyCmd["Up"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::J;
+        key.keyCode = sf::Key::DOWN_KEY;
         keyCmd["Down"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::H;
+        key.keyCode = sf::Key::LEFT_KEY;
         keyCmd["Left"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::L;
+        key.keyCode = sf::Key::RIGHT_KEY;
         keyCmd["Right"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::B;
+        key.keyCode = sf::Key::PGUP_KEY;
         keyCmd["PgUp"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::F;
+        key.keyCode = sf::Key::PGDOWN_KEY;
         keyCmd["PgDown"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::A;
+        key.keyCode = sf::Key::SCROLLUP_KEY;
+        keyCmd["ScrollUp"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::SCROLLDOWN_KEY;
+        keyCmd["ScrollDown"] = key;
+        //
+        key.inputType = INPUT_KEYBOARD;
+        key.eventType = sf::Event::KeyPressed;
+        key.keyCode = sf::Key::LINEBEGIN_KEY;
         keyCmd["LineBegin"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::E;
+        key.keyCode = sf::Key::LINEEND_KEY;
         keyCmd["LineEnd"] = key;
         //
         key.inputType = INPUT_KEYBOARD;
         key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::P;
+        key.keyCode = sf::Key::PLAY_KEY;
         keyCmd["Play"] = key;
     };
     bool testEvent(KeyCmd k, sf::Event *e) {
@@ -207,10 +253,8 @@ private:
             return (true);
         return (false);
     };
-protected:
-/* DRAW */
-public:
-/* DRAW */
+protected: /* DRAW */
+public: /* DRAW */
     void initLoop();
     Draw() {
         viewY = 0;
@@ -246,13 +290,16 @@ public:
         app->Draw(*spr);
     };
 }; /* END OF DRAW */
+/////////////////////////////////////////////////////////////////////
+// CONTROL
+/////////////////////////////////////////////////////////////////////
 class Control {
-private:
-/* CONTROL */
+private: /* CONTROL */
     mpd_connection *conn;
     //sf::Image placeholder;
     bool errStatus;
     Draw *draw;
+    //Config *config;
     Album *albums;
     Album *sel;
     Album *mkAlbum(const char *name) {
@@ -306,6 +353,8 @@ private:
         albums->setNum();
         return true;
     };
+protected: /* CONTROL */
+public: /* CONTROL */
     struct SongList {
         char *node;
         SongList *next;
@@ -329,10 +378,6 @@ private:
         };
     };
     SongList *sl;
-protected:
-/* CONTROL */
-public:
-/* CONTROL */
     bool addAlbum(char *_album) {
         cout << "running add" << endl;
         return (mpd_run_add(conn, _album));
@@ -444,6 +489,7 @@ public:
         if (IS_GUI)
             delete draw;
         delete albums;
+        //delete config;
         albums = NULL;
         mpd_connection_free(conn);
         conn = NULL;
@@ -528,6 +574,9 @@ public:
         albums->setImg();
     };
 }; /*END OF CONTROL*/
+/////////////////////////////////////////////////////////////////////
+// FUNCTIONS
+/////////////////////////////////////////////////////////////////////
 Control::SongList::~SongList() {
     delete next;
     delete [] node;
@@ -711,26 +760,40 @@ void Draw::initLoop() {
                 }
             }
             if (testEvent(keyCmd["LineEnd"], event) && control->getSelY() <= control->getBottomY()) { // You can use a function
-                for (unsigned int i = 0; i < control->getColNum(); i++) {
-                    if (!control->getSel()->getNext())
-                        i = control->getColNum();
-                    else {
-                        if (control->getSel()->getNext()->getX() == 0)
+                if (!event->Key.Control) {
+                    for (unsigned int i = 0; i < control->getColNum(); i++) {
+                        if (!control->getSel()->getNext())
                             i = control->getColNum();
-                        else
-                        control->selNext();
+                        else {
+                            if (control->getSel()->getNext()->getX() == 0)
+                                i = control->getColNum();
+                            else
+                            control->selNext();
+                        }
                     }
                 }
             }
-            if (testEvent(keyCmd["Up"], event) && control->getSelY() > 0) { // You can use a function
-                for (unsigned int i = 0; i < control->getColNum(); i++) {
-                    control->selPrev();
+            if (testEvent(keyCmd["ScrollUp"], event) && control->getSelY() >= 0 && viewY > 0) {
+                if (event->Key.Control) {
+                    viewY--;
+                    for (unsigned int i = 0; i < control->getColNum(); i++)
+                        control->selPrev();
                 }
             }
-            if (testEvent(keyCmd["Down"], event) && control->getSelY() < control->getBottomY()) {
-                for (unsigned int i = 0; i < control->getColNum(); i++) {
-                    control->selNext();
+            if (testEvent(keyCmd["ScrollDown"], event) && control->getSelY() >= 0 && viewY < control->getBottomViewY()) {
+                if (event->Key.Control) {
+                    viewY++;
+                    for (unsigned int i = 0; i < control->getColNum(); i++)
+                        control->selNext();
                 }
+            }
+            if (testEvent(keyCmd["Up"], event) && control->getSelY() > 0) { // You can use a function
+                for (unsigned int i = 0; i < control->getColNum(); i++)
+                    control->selPrev();
+            }
+            if (testEvent(keyCmd["Down"], event) && control->getSelY() < control->getBottomY()) {
+                for (unsigned int i = 0; i < control->getColNum(); i++)
+                    control->selNext();
             }
             if (testEvent(keyCmd["PgUp"], event) && control->getSelY() > 0) {
                 for (unsigned int i = 0; i < (control->getColNum() * control->getRowNum()); i++) {
@@ -745,10 +808,34 @@ void Draw::initLoop() {
                 }
             }
             if (testEvent(keyCmd["Left"], event)) {
-                control->selPrev();
+                if (event->Key.Shift) {
+                    while (control->getSelY() > getViewY())
+                        control->selPrev();
+                    for (unsigned int i = 0; i < control->getColNum(); i++) {
+                        if (control->getSelX() == 0)
+                            i = control->getColNum();
+                        else
+                            control->selPrev();
+                    }
+                } else
+                    control->selPrev();
             }
             if (testEvent(keyCmd["Right"], event)) {
-                control->selNext();
+                if (event->Key.Shift) {
+                    while ((control->getSelY() + 1) < (getViewY() + control->getRowNum()) && (control->getSelY() < control->getBottomY()))
+                        control->selNext();
+                    for (unsigned int i = 0; i < control->getColNum(); i++) {
+                        if (!control->getSel()->getNext())
+                            i = control->getColNum();
+                        else {
+                            if (control->getSel()->getNext()->getX() == 0)
+                                i = control->getColNum();
+                            else
+                            control->selNext();
+                        }
+                    }
+                } else
+                    control->selNext();
             }
             if (testEvent(keyCmd["Play"], event)) {
                 control->addAlbum();
@@ -758,7 +845,7 @@ void Draw::initLoop() {
         }
         app->Clear();
         unsigned int botY = control->getBottomViewY();
-        while ((control->getSelY() - getViewY()) >= (control->getRowNum() - 1) && (control->getSelY() - getViewY()) < (3000000000) && getViewY() < botY) {
+        while ((110 + control->getSelY() - getViewY()) > (109 + control->getRowNum()) && getViewY() < botY) {
             viewY++;
             while (getViewY() > botY) {
                 viewY = botY;
@@ -767,7 +854,7 @@ void Draw::initLoop() {
         while (getViewY() > botY) {
             viewY = botY;
         }
-        while (control->getSelY() - getViewY() <= 0 && getViewY() > 0) {
+        while ((110 + control->getSelY() - getViewY()) < 110 && getViewY() > 0) {
             viewY--;
         }
         //getViewY() > control->getBottomViewY()
@@ -789,7 +876,9 @@ void cleanUp() {
     delete control;
    //exit(0);
 };
+/////////////////////////////////////////////////////////////////////
 // MAIN
+/////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv) {
     control = new Control();
     control->loadImg();
@@ -798,3 +887,4 @@ int main(int argc, char **argv) {
     cleanUp();
     return 0;
 }
+

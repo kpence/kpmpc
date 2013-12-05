@@ -84,12 +84,14 @@ private: /* ALBUM */
     Album *next;
     char *name;
     char *dir;
+    char *artist;
     char *imgDir;
     float selAnimY;
 protected: /* ALBUM */
 public: /* ALBUM */
     char *getName();
     char *getDir();
+    const char *getArtist();
     char *dirTrim();
     bool loadImg();
     bool loadImg(const char *filename, bool _success);
@@ -97,6 +99,7 @@ public: /* ALBUM */
     Album(const char *_name) {
         next = NULL;
         dir = NULL;
+        artist = NULL;
         imgDir = NULL;
         img = NULL;
         spr = NULL;
@@ -114,12 +117,14 @@ public: /* ALBUM */
         cout << "Album deleted: " << getName() << endl;
         delete [] name;
         delete [] dir;
+        delete [] artist;
         if (IS_GUI) {
             delete img;
             delete spr;
         }
         delete next;
         delete [] imgDir;
+        artist = NULL;
         dir = NULL;
         next = NULL;
         img = NULL;
@@ -165,6 +170,14 @@ public: /* ALBUM */
         if (next == _from)
             return (this);
         return (next->getPrev(_from));
+    };
+    void setNext(Album *_next) {
+        next = _next;
+    };
+    Album *getLast() {
+        if (next != NULL)
+            return (next->getLast());
+        return (this);
     };
     Album *getNext() {
         return (next);
@@ -539,6 +552,38 @@ public: /* CONTROL */
     Draw *getDraw() { // returns pointer to Draw class
         return (draw);
     };
+    char *getTag(const char *_album, mpd_tag_type type) { // returns tag
+        char *tagRet = new char[255];
+        mpd_song *song;
+        if (!mpd_search_db_songs(conn, false)) {
+            err();
+            return NULL;
+        }
+        if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _album)) {
+            err();
+            return NULL;
+        }
+        if (!mpd_search_commit(conn)) {
+            err();
+            return NULL;
+        }
+        if ((song = mpd_recv_song(conn)) != NULL) {
+            if (mpd_song_get_tag(song, type, 0) != NULL)
+                strcpy(tagRet, mpd_song_get_tag(song, type, 0));
+            else
+                tagRet = NULL;
+        }
+        mpd_song_free(song);
+        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+            err();
+            return NULL;
+        }
+        if (!mpd_response_finish(conn)) {
+            err();
+            return NULL;
+        }
+        return tagRet;
+    };
     char *getDir(const char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
         char *pathRet = new char[255];
         mpd_song *song;
@@ -573,10 +618,53 @@ public: /* CONTROL */
     void setImgs() { // recursively set's the album's sprites to cover art image
         albums->setImg();
     };
+    void sortAlbums(mpd_tag_type type = MPD_TAG_ARTIST);
 }; /*END OF CONTROL*/
 /////////////////////////////////////////////////////////////////////
 // FUNCTIONS
 /////////////////////////////////////////////////////////////////////
+void Control::sortAlbums(mpd_tag_type type) {
+    static bool isBW = true;
+    bool match;
+    isBW = (!isBW);
+    Album *_pMax = NULL;
+    Album *_max = albums;
+    Album *_new = NULL;
+    while (albums != NULL) {
+        _max = albums;
+        for (Album *_albums = albums; _albums != NULL; _albums = _albums->getNext()) {
+            match = false;
+            if (((strcmp(_albums->getArtist(), _max->getArtist()) >= 0 && isBW) || (strcmp(_albums->getArtist(), _max->getArtist()) <= 0 && !isBW)) && (type == MPD_TAG_ARTIST))
+                _max = _albums;
+            if (strcmp(_albums->getArtist(), _max->getArtist()) == 0 && (type == MPD_TAG_ARTIST || match)) {
+                cout << "Found match: " << _max->getArtist() << endl;
+                _max = _albums;
+                match = true;
+            }
+            if (((strcmp(_albums->getName(), _max->getName()) >= 0 && isBW) || (strcmp(_albums->getName(), _max->getName()) <= 0 && !isBW)) && (type == MPD_TAG_ALBUM || match))
+                _max = _albums;
+        }
+        if (_new == NULL) {
+            _max->setNum(0);
+            _new = _max;
+        }
+        if (albums == _max)
+            albums = _max->getNext();
+        else {
+            albums->getPrev(_max)->setNext(_max->getNext());
+            _max->setNext(NULL);
+        }
+        if (_new != _max) {
+            if (_pMax == NULL)
+                cout << "_pMax IS NULL" << endl;
+            _max->setNum(_pMax->getNum() + 1);
+            _pMax->setNext(_max);
+        }
+        _pMax = _max;
+    }
+    albums = _new;
+    cout << "Done sorting!" << endl;
+}
 Control::SongList::~SongList() {
     delete next;
     delete [] node;
@@ -598,6 +686,15 @@ char *Album::dirTrim() { // returns directory of album
     strcat(imgDir, dir);
     cout << "Trimmed dir: " << imgDir << endl;
     return (dir);
+}
+const char *Album::getArtist() { // returns directory of album
+    if (artist == NULL)
+        artist = control->getTag(getName(), MPD_TAG_ARTIST);
+    if (artist == NULL) {
+        cout << "getArtist: no artist, name: " << getName() << endl;
+        return ("<No Artist>");
+    }
+    return (artist);
 }
 char *Album::getDir() { // returns directory of album
     if (!dir)
@@ -740,6 +837,9 @@ void Draw::initLoop() {
             // Key pressed
             if (event->Type == sf::Event::KeyPressed) {
                 switch (event->Key.Code) {
+                    case sf::Key::S:
+                        control->sortAlbums();
+                        break;
                     case sf::Key::Q:
                         running = false;
                         break;
@@ -857,7 +957,6 @@ void Draw::initLoop() {
         while ((110 + control->getSelY() - getViewY()) < 110 && getViewY() > 0) {
             viewY--;
         }
-        //getViewY() > control->getBottomViewY()
         control->drawSprs();
         app->Display(); // Display the result
     }
@@ -883,8 +982,6 @@ int main(int argc, char **argv) {
     control = new Control();
     control->loadImg();
     control->initDraw(argc, argv);
-    //while (getInput());
     cleanUp();
     return 0;
 }
-

@@ -6,10 +6,11 @@
 #define WIN_WIDTH_FLOAT 800.f
 #define WIN_HEIGHT_FLOAT 600.f
 #define ALBUM_WIN_WIDTH_FLOAT (WIN_WIDTH_FLOAT - 0.f)
-#define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 40.f)
+#define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 48.f)
 #define IS_GUI true
 /* using */
 enum InputType {INPUT_KEYBOARD, INPUT_MOUSE, INPUT_JOYSTICK};
+enum modeType {MODE_NORMAL, MODE_TYPING_FILTER};
 struct KeyCmd {
     InputType inputType;
     sf::Event::EventType eventType;
@@ -125,11 +126,20 @@ public: /* DRAW */
     ~Draw();
     void setText(const char *_text);
     void drawBar();
+    void updateBar();
     unsigned int getViewY();
     float getWidth();
     float getHeight();
     void setTitle(const char *_title);
     void drawSpr(sf::Sprite *spr);
+    void selHMiddle();
+    void selVMiddle();
+    void selTop();
+    void selBottom();
+    void selEnd();
+    void selBegin();
+    void selBeginTop();
+    void selBeginBottom();
 }; /* END OF DRAW */
 /////////////////////////////////////////////////////////////////////
 // CONTROL
@@ -144,6 +154,8 @@ private: /* CONTROL */
     Album *albums;
     Album *sel;
     Album *mkAlbum(const char *name);
+    int mode;
+    char *filter;
     void err();
     bool update(mpd_tag_type type, const char *value);
 protected: /* CONTROL */
@@ -157,14 +169,21 @@ public: /* CONTROL */
     unsigned int getColNum();
     unsigned int getRowNum();
     void initDraw(int &argc, char **argv);
-    void selPrev();
-    void selNext();
+    void searchPrev();
+    void searchNext();
+    void selPrev(bool wrap = false);
+    void selNext(bool wrap = false);
     bool isSelNext();
     Control();
     ~Control();
     float getViewHeight();
     float getViewWidth();
     Album *getSel();
+    int getMode();
+    void setMode(int _mode);
+    const char *getFilter();
+    void rmFilter();
+    void charCatFilter(const char _filter);
     unsigned int getSelY();
     unsigned int getSelX();
     unsigned int getBottomY();
@@ -197,5 +216,5 @@ bool getInput();
 void cleanUp();
 namespace ctrl {
     Control *control;
-    const char config[] = "# list of configurations in README\nmusic_dir=\nmain.exe\n";
+    //const char config[] = "# list of configurations in README\nmusic_dir=\nmain.exe\n";
 };

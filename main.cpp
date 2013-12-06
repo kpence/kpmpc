@@ -12,14 +12,6 @@
 #include <boost/filesystem.hpp>
 #include "config.h"
 #include "main.h"
-/* constants */
-#define WIN_WIDTH 800
-#define WIN_HEIGHT 600
-#define WIN_WIDTH_FLOAT 800.f
-#define WIN_HEIGHT_FLOAT 600.f
-#define ALBUM_WIN_WIDTH_FLOAT (WIN_WIDTH_FLOAT - 0.f)
-#define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 40.f)
-#define IS_GUI true
 /* using */
 using std::cout;
 using std::cin;
@@ -212,7 +204,7 @@ void Draw::setKeys() {
     keyCmd["Play"] = key;
 }
 bool Draw::testEvent(KeyCmd k, sf::Event *e) {
-    if (!running)
+    if (!running || control->getMode() != MODE_NORMAL)
         return (false);
     if (k.inputType == INPUT_MOUSE && k.eventType == e->Type && k.mouseButton == e->MouseButton.Button)
         return (true);
@@ -260,8 +252,7 @@ void Draw::initBar() {
     else {
         text = new sf::String();
         text->SetFont(*font);
-        text->SetSize(20);
-        text->SetPosition(5.f, ALBUM_WIN_HEIGHT_FLOAT + 1.f);
+        text->SetSize(100);
         text->SetText("<Status Bar>");
         text->SetColor(sf::Color::White);
     }
@@ -269,13 +260,35 @@ void Draw::initBar() {
 void Draw::drawBar() {
     app->Draw(*bar);
     if (font != NULL) {
-        text->SetSize(100);
+        text->SetPosition(5.f, ALBUM_WIN_HEIGHT_FLOAT - (150.f / std::max(control->getViewHeight() - 150.f, 0.f)));
         text->SetScaleX(90 / control->getViewWidth());
         text->SetScaleY(90 / control->getViewHeight());
         app->Draw(*text);
     }
     else
         cout << "WORK" << endl;
+}
+void Draw::updateBar() {
+    char *msg = new char[256];
+    strcpy(msg, control->getSel()->getArtist());
+    strcat(msg, " - ");
+    strcat(msg, control->getSel()->getDate());
+    strcat(msg, " - ");
+    strcat(msg, control->getSel()->getName());
+    if (control->getMode() == MODE_TYPING_FILTER)
+        strcat(msg, " - SEARCH: ");
+    if (control->getFilter() != NULL) {
+        if (strcmp(control->getFilter(), "") != 0) {
+            if (control->getMode() != MODE_TYPING_FILTER)
+                strcat(msg, " (s: ");
+            strcat(msg, control->getFilter());
+            if (control->getMode() != MODE_TYPING_FILTER)
+                strcat(msg, ")");
+        }
+    }
+    setText(msg);
+    delete [] msg;
+    msg = NULL;
 }
 void Draw::setText(const char *_text) {
     if (font != NULL)
@@ -441,35 +454,55 @@ unsigned int Control::getRowNum() {
         return (ceil(getViewHeight() / 160));
     return 1;
 }
-void Control::selPrev() {
+int Control::getMode() {
+    return mode;
+}
+void Control::setMode(int _mode) {
+    mode = _mode;
+    draw->updateBar();
+}
+void Control::searchNext() {
+    Album *_start = sel;
+    if (filter != NULL) {
+        if (strcmp(filter, "") != 0) {
+            selNext(true);
+            while (strstr(sel->getArtist(), getFilter()) == NULL && strstr(sel->getName(), getFilter()) == NULL) {
+                selNext(true);
+                if (sel == _start)
+                    break;
+            }
+        }
+    }
+}
+void Control::searchPrev() {
+    Album *_start = sel;
+    if (filter != NULL) {
+        if (strcmp(filter, "") != 0) {
+            selPrev(true);
+            while (strstr(sel->getArtist(), getFilter()) == NULL && strstr(sel->getName(), getFilter()) == NULL) {
+                selPrev(true);
+                if (sel == _start)
+                    break;
+            }
+        }
+    }
+}
+void Control::selPrev(bool wrap) {
     if (sel != albums)
         sel = albums->getPrev(sel);
+    else if (wrap)
+        sel = albums->getLast();
+    draw->updateBar();
     cout << "\n< Selecting previous album which is >:" << endl;
-    char *msg = new char[256];
-    strcpy(msg, sel->getArtist());
-    strcat(msg, " - ");
-    strcat(msg, sel->getDate());
-    strcat(msg, " - ");
-    strcat(msg, sel->getName());
-    getDraw()->setText(msg);
-    delete [] msg;
-    msg = NULL;
     sel->printDir();
-    draw->setTitle(sel->getName());
     cout << "< / Selecting previous DONE >" << endl;
 }
-void Control::selNext() {
+void Control::selNext(bool wrap) {
     if (sel->getNext())
         sel = sel->getNext();
-    char *msg = new char[256];
-    strcpy(msg, sel->getArtist());
-    strcat(msg, " - ");
-    strcat(msg, sel->getDate());
-    strcat(msg, " - ");
-    strcat(msg, sel->getName());
-    getDraw()->setText(msg);
-    delete [] msg;
-    msg = NULL;
+    else if (wrap)
+        sel = albums;
+    draw->updateBar();
     cout << "\n< Selecting next album which is >:" << endl;
     sel->printDir();
     cout << "< / Selecting next DONE >" << endl;
@@ -481,6 +514,8 @@ bool Control::isSelNext() {
 }
 Control::Control() {
     cout << "Control instantiating" << endl;
+    mode = MODE_NORMAL;
+    filter = NULL;
     conn = mpd_connection_new(NULL, 0, 30000);
     errStatus = false;
     albums = NULL;
@@ -524,6 +559,42 @@ unsigned int Control::getBottomViewY() { // returns the minimum Y position of vi
     if ((getBottomY() - getRowNum() + 1) > 3000000000)
         return 0;
     return (getBottomY() - getRowNum() + 1);
+}
+void Control::rmFilter() {
+    delete [] filter;
+    filter = NULL;
+}
+const char *Control::getFilter() {
+    return (filter);
+}
+void Control::charCatFilter(const char _filter) {
+    if (_filter != 0) {
+        if (filter == NULL) {
+            filter = new char[256];
+            strcpy(filter, "");
+        }
+        if (strcmp(filter, "") == 0) {
+            if (_filter != 8 && _filter != 23 && _filter != 21)
+                strncpy(filter, &_filter, 1);
+            else
+                setMode(MODE_NORMAL);
+        }
+        else {
+            if (_filter == 8)
+                filter[strlen(filter) - 1] = '\0';
+            else if (_filter == 21)
+                rmFilter();
+            else if (_filter == 23) {
+                while (filter[0] != '\0' && filter[std::max((long unsigned int)0, strlen(filter) - 1)] == ' ')
+                    filter[strlen(filter) - 1] = '\0';
+                while (filter[0] != '\0' && filter[std::max((long unsigned int)0, strlen(filter) - 1)] != ' ')
+                    filter[strlen(filter) - 1] = '\0';
+            }
+            else if (_filter > 31)
+                strncat(filter, &_filter, 1);
+        }
+    }
+    getDraw()->updateBar();
 }
 void Control::play() { // Makes mpd start playing the playlist
     mpd_run_play(conn);
@@ -825,7 +896,57 @@ void Control::initDraw(int &argc, char **argv) {
         draw->initLoop();
     }
 }
+void Draw::selVMiddle() {
+    selBeginBottom();
+    for (unsigned int f = 0; f < floor(control->getRowNum() / 2); f++) {
+        for (unsigned int i = 0; i < control->getColNum(); i++)
+            control->selPrev();
+    }
+}
+void Draw::selBottom() {
+    while ((control->getSelY() + 1) < (getViewY() + control->getRowNum()) && (control->getSelY() < control->getBottomY()))
+        control->selNext();
+}
+void Draw::selBeginTop() {
+    selTop();
+    selBegin();
+}
+void Draw::selBeginBottom() {
+    selBottom();
+    selBegin();
+}
+void Draw::selTop() {
+    while (control->getSelY() > getViewY())
+        control->selPrev();
+}
+void Draw::selBegin() {
+    if (control->getSelY() >= 0) {
+        for (unsigned int i = 0; i < control->getColNum(); i++) {
+            if (control->getSelX() == 0)
+                i = control->getColNum();
+            else
+                control->selPrev();
+        }
+    }
+}
+void Draw::selEnd() {
+    if (control->getSelY() <= control->getBottomY()) {
+        if (!event->Key.Control) {
+            for (unsigned int i = 0; i < control->getColNum(); i++) {
+                if (!control->getSel()->getNext())
+                    i = control->getColNum();
+                else {
+                    if (control->getSel()->getNext()->getX() == 0)
+                        i = control->getColNum();
+                    else
+                    control->selNext();
+                }
+            }
+        }
+    }
+}
 void Draw::initLoop() {
+    bool ignoreFirstChar = true;
     while (running) {
         // Manage Events
         while (app->GetEvent(*event)) {
@@ -836,13 +957,48 @@ void Draw::initLoop() {
                 running = false;
  
             // Key pressed
-            if (event->Type == sf::Event::KeyPressed) {
+            if (event->Type == sf::Event::TextEntered && control->getMode() == MODE_TYPING_FILTER) {
+                updateBar();
+                char txt = (char)event->Text.Unicode;
+                cout << txt << endl;
+                printf("%i\n", txt);
+                if (txt == 3) {
+                    control->rmFilter();
+                    control->setMode(MODE_NORMAL);
+                    updateBar();
+                } else if (txt == 13 || txt == 10) {
+                    control->setMode(MODE_NORMAL);
+                    updateBar();
+                } else if ((txt != '/' || !ignoreFirstChar) && txt != 31)
+                    control->charCatFilter(txt);
+                //8 is backspace
+            }
+            ignoreFirstChar = false;
+
+            // Key pressed
+            if (event->Type == sf::Event::KeyPressed && control->getMode() == MODE_NORMAL) {
                 switch (event->Key.Code) {
                     case sf::Key::S:
                         control->sortAlbums();
                         break;
                     case sf::Key::Q:
                         running = false;
+                        break;
+                    case sf::Key::Slash:
+                        if (!event->Key.Control) {
+                            control->setMode(MODE_TYPING_FILTER);
+                            updateBar();
+                            ignoreFirstChar = true;
+                        }
+                        break;
+                    case sf::Key::N:
+                        if (!event->Key.Shift)
+                            control->searchNext();
+                        else
+                            control->searchPrev();
+                        break;
+                    case sf::Key::M:
+                        selVMiddle();
                         break;
                     case sf::Key::Escape:
                         running = false;
@@ -852,27 +1008,11 @@ void Draw::initLoop() {
                 }
             }
             // Using Event for binding
-            if (testEvent(keyCmd["LineBegin"], event) && control->getSelY() >= 0) { // You can use a function
-                for (unsigned int i = 0; i < control->getColNum(); i++) {
-                    if (control->getSelX() == 0)
-                        i = control->getColNum();
-                    else
-                        control->selPrev();
-                }
+            if (testEvent(keyCmd["LineBegin"], event)) { // You can use a function
+                selBegin();
             }
-            if (testEvent(keyCmd["LineEnd"], event) && control->getSelY() <= control->getBottomY()) { // You can use a function
-                if (!event->Key.Control) {
-                    for (unsigned int i = 0; i < control->getColNum(); i++) {
-                        if (!control->getSel()->getNext())
-                            i = control->getColNum();
-                        else {
-                            if (control->getSel()->getNext()->getX() == 0)
-                                i = control->getColNum();
-                            else
-                            control->selNext();
-                        }
-                    }
-                }
+            if (testEvent(keyCmd["LineEnd"], event)) { // You can use a function
+                selEnd();
             }
             if (testEvent(keyCmd["ScrollUp"], event) && control->getSelY() >= 0 && viewY > 0) {
                 if (event->Key.Control) {
@@ -910,27 +1050,13 @@ void Draw::initLoop() {
             }
             if (testEvent(keyCmd["Left"], event)) {
                 if (event->Key.Shift) {
-                    while (control->getSelY() > getViewY())
-                        control->selPrev();
-                    for (unsigned int i = 0; i < control->getColNum(); i++) {
-                        if (control->getSelX() == 0)
-                            i = control->getColNum();
-                        else
-                            control->selPrev();
-                    }
+                    selBeginTop();
                 } else
                     control->selPrev();
             }
             if (testEvent(keyCmd["Right"], event)) {
                 if (event->Key.Shift) {
-                    while ((control->getSelY() + 1) < (getViewY() + control->getRowNum()) && (control->getSelY() < control->getBottomY()))
-                        control->selNext();
-                    for (unsigned int i = 0; i < control->getColNum(); i++) {
-                        if (control->getSelX() == 0)
-                            i = control->getColNum();
-                        else
-                            control->selPrev();
-                    }
+                    selBeginBottom();
                 } else
                     control->selNext();
             }

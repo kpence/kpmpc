@@ -379,7 +379,6 @@ bool Control::update(mpd_tag_type type, const char *value) {
 
     cout << "Successful Update" << endl;
     albums->setNum();
-    sortAlbums();
     return true;
 }
 bool Control::addAlbum(char *_album) {
@@ -894,6 +893,7 @@ void Control::initDraw(int &argc, char **argv) {
         draw = new Draw();
         setImgs();
         cout << "Gonna do loop" << endl;
+        sortAlbums();
         draw->initLoop();
     }
 }

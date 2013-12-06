@@ -1,5 +1,6 @@
-// KPMPC see LICENSE for copyright information (MIT license)
+// TODO Make albums sort by year instead of alphabetically
 //
+// KPMPC see LICENSE for copyright information (MIT license)
 // In order for this to work I think you'll need mpdclient and SFML 1.6
 //
 /* includes */
@@ -515,7 +516,8 @@ bool Control::isSelNext() {
 Control::Control() {
     cout << "Control instantiating" << endl;
     mode = MODE_NORMAL;
-    filter = NULL;
+    filter = new char[256];
+    rmFilter();
     conn = mpd_connection_new(NULL, 0, 30000);
     errStatus = false;
     albums = NULL;
@@ -528,6 +530,8 @@ Control::Control() {
     }
 }
 Control::~Control() {
+    delete [] filter;
+    filter = NULL;
     if (IS_GUI)
         delete draw;
     delete albums;
@@ -561,27 +565,29 @@ unsigned int Control::getBottomViewY() { // returns the minimum Y position of vi
     return (getBottomY() - getRowNum() + 1);
 }
 void Control::rmFilter() {
-    delete [] filter;
-    filter = NULL;
+    cout << "Control::rmFilter()" << endl;
+    filter[0] = '\0';
+    cout << "Filter: " << filter << endl;
 }
 const char *Control::getFilter() {
     return (filter);
 }
 void Control::charCatFilter(const char _filter) {
-    if (_filter != 0) {
-        if (filter == NULL) {
-            filter = new char[256];
-            strcpy(filter, "");
-        }
-        if (strcmp(filter, "") == 0) {
-            if (_filter != 8 && _filter != 23 && _filter != 21)
-                strncpy(filter, &_filter, 1);
+    if (_filter > 0) {
+        if (filter[0] == '\0') {
+            printf("strcpy: %i, %c", _filter, _filter);
+            if (_filter != 8 && _filter != 23 && _filter != 21 && _filter > 0) {
+                filter[0] = _filter;
+                filter[1] = '\0';
+            }
             else
                 setMode(MODE_NORMAL);
         }
         else {
-            if (_filter == 8)
+            if (_filter == 8) {
+                printf("deleting: %i, %c\n", filter[strlen(filter) - 1], filter[strlen(filter) - 1]);
                 filter[strlen(filter) - 1] = '\0';
+            }
             else if (_filter == 21)
                 rmFilter();
             else if (_filter == 23) {
@@ -689,6 +695,7 @@ void Control::setImgs() { // recursively set's the album's sprites to cover art 
 void Control::sortAlbums(mpd_tag_type type) {
     static bool isBW = true;
     bool match;
+    bool match2;
     isBW = (!isBW);
     Album *_pMax = NULL;
     Album *_max = albums;
@@ -697,12 +704,23 @@ void Control::sortAlbums(mpd_tag_type type) {
         _max = albums;
         for (Album *_albums = albums; _albums != NULL; _albums = _albums->getNext()) {
             match = false;
+            match2 = false;
             if (((strcmp(_albums->getArtist(), _max->getArtist()) >= 0 && isBW) || (strcmp(_albums->getArtist(), _max->getArtist()) <= 0 && !isBW)) && (type == MPD_TAG_ARTIST))
                 _max = _albums;
             if (strcmp(_albums->getArtist(), _max->getArtist()) == 0 && (type == MPD_TAG_ARTIST || match)) {
                 cout << "Found match: " << _max->getArtist() << endl;
                 _max = _albums;
                 match = true;
+            }
+            if (((strcmp(_albums->getDate(), _max->getDate()) >= 0 && isBW) || (strcmp(_albums->getDate(), _max->getDate()) <= 0 && !isBW)) && (type == MPD_TAG_DATE || match)) {
+                _max = _albums;
+                match = false;
+                match2 = true;
+            }
+            if (((strcmp(_albums->getDate(), _max->getDate()) == 0 && isBW) || (strcmp(_albums->getDate(), _max->getDate()) <= 0 && !isBW)) && (type == MPD_TAG_DATE || match2)) {
+                _max = _albums;
+                match = true;
+                match2 = false;
             }
             if (((strcmp(_albums->getName(), _max->getName()) >= 0 && isBW) || (strcmp(_albums->getName(), _max->getName()) <= 0 && !isBW)) && (type == MPD_TAG_ALBUM || match))
                 _max = _albums;
@@ -899,7 +917,10 @@ void Control::initDraw(int &argc, char **argv) {
 }
 void Draw::selVMiddle() {
     selBeginBottom();
-    for (unsigned int f = 0; f < floor(control->getRowNum() / 2); f++) {
+    //if (control->getRowNum() - 1)
+    //    unsigned int _f = (control->getRowNum() - 1) / 2;
+    //else
+    for (unsigned int f = 0; f < control->getRowNum() / 2/*_f*/; f++) {
         for (unsigned int i = 0; i < control->getColNum(); i++)
             control->selPrev();
     }
@@ -947,7 +968,7 @@ void Draw::selEnd() {
     }
 }
 void Draw::initLoop() {
-    bool ignoreFirstChar = true;
+    int ignoreFirstChar = 2;
     while (running) {
         // Manage Events
         while (app->GetEvent(*event)) {
@@ -961,8 +982,7 @@ void Draw::initLoop() {
             if (event->Type == sf::Event::TextEntered && control->getMode() == MODE_TYPING_FILTER) {
                 updateBar();
                 char txt = (char)event->Text.Unicode;
-                cout << txt << endl;
-                printf("%i\n", txt);
+                printf("Text: %i, %c\n", txt, txt);
                 if (txt == 3) {
                     control->rmFilter();
                     control->setMode(MODE_NORMAL);
@@ -970,11 +990,12 @@ void Draw::initLoop() {
                 } else if (txt == 13 || txt == 10) {
                     control->setMode(MODE_NORMAL);
                     updateBar();
-                } else if ((txt != '/' || !ignoreFirstChar) && txt != 31)
+                } else if ((txt != '/' || ignoreFirstChar <= 0) && txt != 31)
                     control->charCatFilter(txt);
                 //8 is backspace
             }
-            ignoreFirstChar = false;
+            if (ignoreFirstChar > 0)
+                ignoreFirstChar -= 1;
 
             // Key pressed
             if (event->Type == sf::Event::KeyPressed && control->getMode() == MODE_NORMAL) {
@@ -988,8 +1009,9 @@ void Draw::initLoop() {
                     case sf::Key::Slash:
                         if (!event->Key.Control) {
                             control->setMode(MODE_TYPING_FILTER);
+                            control->rmFilter();
                             updateBar();
-                            ignoreFirstChar = true;
+                            ignoreFirstChar = 2;
                         }
                         break;
                     case sf::Key::N:

@@ -8,35 +8,24 @@
 #include <cstring>
 #include <mpd/client.h> // http://libmpdclient.sourcearchive.com/documentation/2.1-1/example_8c-source.html
 #include <fstream>
-#include "config.h"
 #include <SFML/Graphics.hpp> //http://www.sfml-dev.org/documentation/1.6/index.php
 #include <boost/filesystem.hpp>
+#include "config.h"
+#include "main.h"
 /* constants */
 #define WIN_WIDTH 800
 #define WIN_HEIGHT 600
 #define WIN_WIDTH_FLOAT 800.f
 #define WIN_HEIGHT_FLOAT 600.f
+#define ALBUM_WIN_WIDTH_FLOAT (WIN_WIDTH_FLOAT - 0.f)
+#define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 40.f)
 #define IS_GUI true
+#define FONT_DIR "/usr/share/fonts/corefonts/arial.ttf"
 /* using */
 using std::cout;
 using std::cin;
 using std::endl;
-enum InputType {INPUT_KEYBOARD, INPUT_MOUSE, INPUT_JOYSTICK};
-class Control;
-class Draw;
-struct KeyCmd {
-    InputType inputType;
-    sf::Event::EventType eventType;
-    sf::Key::Code keyCode;
-    sf::Mouse::Button mouseButton;
-};
-namespace ctrl {
-    Control *control;
-    const char config[] = "# list of configurations in README\n music_dir=\n main.exe\n";
-};
 using ctrl::control;
-//
-void cleanUp();
 //
 /////////////////////////////////////////////////////////////////////
 // CONFIG
@@ -76,550 +65,554 @@ public:  CONFIG
 /////////////////////////////////////////////////////////////////////
 // ALBUM
 /////////////////////////////////////////////////////////////////////
-class Album {
-private: /* ALBUM */
-    unsigned int num;
-    sf::Sprite *spr;
-    sf::Image *img;
-    Album *next;
-    char *name;
-    char *dir;
-    char *artist;
-    char *imgDir;
-    float selAnimY;
-protected: /* ALBUM */
-public: /* ALBUM */
-    char *getName();
-    char *getDir();
-    const char *getArtist();
-    char *dirTrim();
-    bool loadImg();
-    bool loadImg(const char *filename, bool _success);
-    void selAnim();
-    Album(const char *_name) {
-        next = NULL;
-        dir = NULL;
-        artist = NULL;
-        imgDir = NULL;
-        img = NULL;
-        spr = NULL;
-        num = 0;
-        selAnimY = 0;
-        name = new char[128];
-        strcpy(name, _name);
-        if (IS_GUI) {
-            img = new sf::Image;
-            spr = new sf::Sprite;
-        }
-        cout << "Album instantiated: " << getName() << endl;
-    };
-    ~Album() {
-        cout << "Album deleted: " << getName() << endl;
-        delete [] name;
-        delete [] dir;
-        delete [] artist;
-        if (IS_GUI) {
-            delete img;
-            delete spr;
-        }
-        delete next;
-        delete [] imgDir;
-        artist = NULL;
-        dir = NULL;
-        next = NULL;
-        img = NULL;
-        spr = NULL;
-        imgDir = NULL;
-    };
-    Album *mkAlbum(const char *_name) {
-        Album *ret;
-        if (next) {
-            next->num = num + 1;
-            ret = next->mkAlbum(_name);
-        } else
-            ret = next = new Album(_name);
-        return (ret);
-    };
-    unsigned int getBottomY() {
-        if (!next)
-            return (getY());
-        return (next->getBottomY());
-    };
-    unsigned int getNum() {
-        return (num);
-    };
-    void setNum();
-    void setNum(unsigned int _num);
-    void printDir(bool recurs);
-    void printDir() {
-        printDir(false);
-    };
-    unsigned int getX();
-    unsigned int getY(bool fromView);
-    unsigned int getY() {
-        return (getY(false));
-    };
-    bool isImg() {
-        if (strcmp(imgDir, "<No image>") == 0)
-            return false;
-        return true;
-    };
-    Album *getPrev(Album *_from) {
-        if (!next)
-            return (this);
-        if (next == _from)
-            return (this);
-        return (next->getPrev(_from));
-    };
-    void setNext(Album *_next) {
-        next = _next;
-    };
-    Album *getLast() {
-        if (next != NULL)
-            return (next->getLast());
+Album::Album(const char *_name) {
+    next = NULL;
+    dir = NULL;
+    artist = NULL;
+    date = NULL;
+    imgDir = NULL;
+    img = NULL;
+    spr = NULL;
+    num = 0;
+    selAnimY = 0;
+    name = new char[128];
+    strcpy(name, _name);
+    if (IS_GUI) {
+        img = new sf::Image;
+        spr = new sf::Sprite;
+    }
+    cout << "Album instantiated: " << getName() << endl;
+}
+Album::~Album() {
+    cout << "Album deleted: " << getName() << endl;
+    delete [] name;
+    delete [] dir;
+    delete [] artist;
+    delete [] date;
+    if (IS_GUI) {
+        delete img;
+        delete spr;
+    }
+    delete next;
+    delete [] imgDir;
+    artist = NULL;
+    date = NULL;
+    dir = NULL;
+    next = NULL;
+    img = NULL;
+    spr = NULL;
+    imgDir = NULL;
+}
+Album *Album::mkAlbum(const char *_name) {
+    Album *ret;
+    if (next) {
+        next->num = num + 1;
+        ret = next->mkAlbum(_name);
+    } else
+        ret = next = new Album(_name);
+    return (ret);
+}
+unsigned int Album::getBottomY() {
+    if (!next)
+        return (getY());
+    return (next->getBottomY());
+}
+unsigned int Album::getNum() {
+    return (num);
+}
+void Album::printDir() {
+    printDir(false);
+}
+unsigned int Album::getY() {
+    return (getY(false));
+}
+bool Album::isImg() {
+    if (strcmp(imgDir, "<No image>") == 0)
+        return false;
+    return true;
+}
+Album *Album::getPrev(Album *_from) {
+    if (!next)
         return (this);
-    };
-    Album *getNext() {
-        return (next);
-    };
-    sf::Sprite *getSpr() {
-        return (spr);
-    };
-    void setImg();
-    void drawSpr();
-}; /* END OF ALBUM */
+    if (next == _from)
+        return (this);
+    return (next->getPrev(_from));
+}
+void Album::setNext(Album *_next) {
+    next = _next;
+}
+Album *Album::getLast() {
+    if (next != NULL)
+        return (next->getLast());
+    return (this);
+}
+Album *Album::getNext() {
+    return (next);
+}
+sf::Sprite *Album::getSpr() {
+    return (spr);
+}
 /////////////////////////////////////////////////////////////////////
 // DRAW
 /////////////////////////////////////////////////////////////////////
-class Draw { // http://sfml-dev.org/tutorials/1.6/graphics-sprite.php
-private: /* DRAW */
-    sf::VideoMode *videoMode;
-    sf::RenderWindow *app;
-    sf::Event *event;
-    unsigned int viewY;
-    bool running;
-    std::map<std::string, KeyCmd> keyCmd;
-    KeyCmd key;
-    void setKeys() {
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::UP_KEY;
-        keyCmd["Up"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::DOWN_KEY;
-        keyCmd["Down"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::LEFT_KEY;
-        keyCmd["Left"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::RIGHT_KEY;
-        keyCmd["Right"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::PGUP_KEY;
-        keyCmd["PgUp"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::PGDOWN_KEY;
-        keyCmd["PgDown"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::SCROLLUP_KEY;
-        keyCmd["ScrollUp"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::SCROLLDOWN_KEY;
-        keyCmd["ScrollDown"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::LINEBEGIN_KEY;
-        keyCmd["LineBegin"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::LINEEND_KEY;
-        keyCmd["LineEnd"] = key;
-        //
-        key.inputType = INPUT_KEYBOARD;
-        key.eventType = sf::Event::KeyPressed;
-        key.keyCode = sf::Key::PLAY_KEY;
-        keyCmd["Play"] = key;
-    };
-    bool testEvent(KeyCmd k, sf::Event *e) {
-        if (!running)
-            return (false);
-        if (k.inputType == INPUT_MOUSE && k.eventType == e->Type && k.mouseButton == e->MouseButton.Button)
-            return (true);
-        if (k.inputType == INPUT_KEYBOARD && k.eventType == e->Type && k.keyCode == e->Key.Code)
-            return (true);
+void Draw::setKeys() {
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::UP_KEY;
+    keyCmd["Up"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::DOWN_KEY;
+    keyCmd["Down"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::LEFT_KEY;
+    keyCmd["Left"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::RIGHT_KEY;
+    keyCmd["Right"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::PGUP_KEY;
+    keyCmd["PgUp"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::PGDOWN_KEY;
+    keyCmd["PgDown"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::SCROLLUP_KEY;
+    keyCmd["ScrollUp"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::SCROLLDOWN_KEY;
+    keyCmd["ScrollDown"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::LINEBEGIN_KEY;
+    keyCmd["LineBegin"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::LINEEND_KEY;
+    keyCmd["LineEnd"] = key;
+    //
+    key.inputType = INPUT_KEYBOARD;
+    key.eventType = sf::Event::KeyPressed;
+    key.keyCode = sf::Key::PLAY_KEY;
+    keyCmd["Play"] = key;
+}
+bool Draw::testEvent(KeyCmd k, sf::Event *e) {
+    if (!running)
         return (false);
-    };
-protected: /* DRAW */
-public: /* DRAW */
-    void initLoop();
-    Draw() {
-        viewY = 0;
-        running = true;
-        videoMode = new sf::VideoMode(WIN_WIDTH, WIN_HEIGHT, 32);
-        //sf::VideoMode videoMode_;
-        //videoMode_ = sf::VideoMode::GetMode(0);
-        app = new sf::RenderWindow(*videoMode, "KPMPC");
-        event = new sf::Event();
-        setKeys();
-        //initLoop();
-    };
-    ~Draw() {
-        app->Close();
-        delete videoMode;
-        delete app;
-        delete event;
-    };
-    unsigned int getViewY() {
-        return (viewY);
-    };
-    float getWidth() {
-        return(float(app->GetWidth()));
-    };
-    float getHeight() {
-        return(float(app->GetHeight()));
-    };
-    void setTitle(const char *_title) {
-        // not sure if you can do this in SFML 1.6 but I'm too lazy to get 2.0
+    if (k.inputType == INPUT_MOUSE && k.eventType == e->Type && k.mouseButton == e->MouseButton.Button)
+        return (true);
+    if (k.inputType == INPUT_KEYBOARD && k.eventType == e->Type && k.keyCode == e->Key.Code)
+        return (true);
+    return (false);
+}
+Draw::Draw() {
+    viewY = 0;
+    running = true;
+    videoMode = new sf::VideoMode(WIN_WIDTH, WIN_HEIGHT, 32);
+    //sf::VideoMode videoMode_;
+    //videoMode_ = sf::VideoMode::GetMode(0);
+    app = new sf::RenderWindow(*videoMode, "KPMPC");
+    event = new sf::Event();
+    initBar();
+    setKeys();
+    //initLoop();
+}
+Draw::~Draw() {
+    app->Close();
+    delete font;
+    delete text;
+    delete bar;
+    delete videoMode;
+    delete app;
+    delete event;
+}
+void Draw::initBar() {
+    bar = new sf::Shape();
+    bar->AddPoint(0.f, ALBUM_WIN_HEIGHT_FLOAT, sf::Color::Black, sf::Color::White);
+    bar->AddPoint(WIN_WIDTH_FLOAT, ALBUM_WIN_HEIGHT_FLOAT, sf::Color::Black, sf::Color::White);
+    bar->AddPoint(WIN_WIDTH_FLOAT, WIN_HEIGHT_FLOAT, sf::Color::Black, sf::Color::White);
+    bar->AddPoint(0.f, WIN_HEIGHT_FLOAT, sf::Color::Black, sf::Color::White);
+    bar->EnableFill(true);
+    bar->SetColor(sf::Color::Black);
+    font = new sf::Font();
+    if (!font->LoadFromFile(FONT_DIR)) {
+        while (true)
+            cout << "[!!!!] Font could not load" << endl;
+        delete font;
+        font = NULL;
+        text = NULL;
     }
-    void drawSpr(sf::Sprite *spr) {
-        //cout << "draw drawing spr" << endl;
-        app->Draw(*spr);
-    };
-}; /* END OF DRAW */
+    else {
+        text = new sf::String();
+        text->SetFont(*font);
+        text->SetSize(20);
+        text->SetPosition(5.f, ALBUM_WIN_HEIGHT_FLOAT + 1.f);
+        text->SetText("<Status Bar>");
+        text->SetColor(sf::Color::White);
+    }
+}
+void Draw::drawBar() {
+    app->Draw(*bar);
+    if (font != NULL) {
+        text->SetSize(100);
+        text->SetScaleX(90 / control->getViewWidth());
+        text->SetScaleY(90 / control->getViewHeight());
+        app->Draw(*text);
+    }
+    else
+        cout << "WORK" << endl;
+}
+void Draw::setText(const char *_text) {
+    if (font != NULL)
+        text->SetText(_text);
+}
+unsigned int Draw::getViewY() {
+    return (viewY);
+}
+float Draw::getWidth() {
+    return(float(app->GetWidth()));
+}
+float Draw::getHeight() {
+    return(float(app->GetHeight()));
+}
+void Draw::setTitle(const char *_title) {
+    // not sure if you can do this in SFML 1.6 but I'm too lazy to get 2.0
+}
+void Draw::drawSpr(sf::Sprite *spr) {
+    //cout << "draw drawing spr" << endl;
+    app->Draw(*spr);
+}
 /////////////////////////////////////////////////////////////////////
 // CONTROL
 /////////////////////////////////////////////////////////////////////
-class Control {
-private: /* CONTROL */
-    mpd_connection *conn;
-    //sf::Image placeholder;
-    bool errStatus;
-    Draw *draw;
-    //Config *config;
-    Album *albums;
-    Album *sel;
-    Album *mkAlbum(const char *name) {
-        if (albums)
-            return (albums->mkAlbum(name));
-        else {
-            sel = albums = new Album(name);
-            return (albums);
-        }
-    };
-    void err() {
-        cout << "Err" << endl;
-        fprintf(stderr,"%s\n", mpd_connection_get_error_message(conn));
-        mpd_connection_free(conn);
-        errStatus = true;
-        //cleanup();
-    };
-    bool update(mpd_tag_type type, const char *value) {
-        mpd_pair *pair;
-        delete albums;
-        albums = NULL;
-        if (!mpd_search_db_tags(conn, MPD_TAG_ALBUM)) {
+Control::SongList::SongList(const char *_node) {
+    node = new char[255];
+    strcpy(node, _node);
+    next = NULL;
+}
+void Control::SongList::mkSongList(const char *_node) {
+    if (next)
+        next->mkSongList(_node);
+    else
+        next = new SongList(_node);
+}
+void Control::SongList::add() {
+    cout << "Adding song: " << node << endl;
+    control->addAlbum(node);
+    if (next)
+        next->add();
+}
+Album *Control::mkAlbum(const char *name) {
+    if (albums)
+        return (albums->mkAlbum(name));
+    else {
+        sel = albums = new Album(name);
+        return (albums);
+    }
+}
+void Control::err() {
+    cout << "Err" << endl;
+    fprintf(stderr,"%s\n", mpd_connection_get_error_message(conn));
+    mpd_connection_free(conn);
+    errStatus = true;
+    //cleanup();
+}
+bool Control::update(mpd_tag_type type, const char *value) {
+    mpd_pair *pair;
+    delete albums;
+    albums = NULL;
+    if (!mpd_search_db_tags(conn, MPD_TAG_ALBUM)) {
+        err();
+        return false;
+    }
+    if (strcmp(value, "") != 0) {
+        if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, type, value)) {
             err();
             return false;
         }
-        if (strcmp(value, "") != 0) {
-            if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, type, value)) {
-                err();
-                return false;
-            }
-        }
-        if (!mpd_search_commit(conn)) {
-            err();
-            return false;
-        }
-        while ((pair = mpd_recv_pair_tag(conn, MPD_TAG_ALBUM)) != NULL) {
-                mkAlbum(pair->value);
-                mpd_return_pair(conn, pair);
-        }
-        //delete pair;
-        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-            err();
-            return false;
-        }
-        if (!mpd_response_finish(conn)) {
-            err();
-            return false;
-        }
+    }
+    if (!mpd_search_commit(conn)) {
+        err();
+        return false;
+    }
+    while ((pair = mpd_recv_pair_tag(conn, MPD_TAG_ALBUM)) != NULL) {
+            mkAlbum(pair->value);
+            mpd_return_pair(conn, pair);
+    }
+    //delete pair;
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+        err();
+        return false;
+    }
+    if (!mpd_response_finish(conn)) {
+        err();
+        return false;
+    }
 
-        cout << "Successful Update" << endl;
-        albums->setNum();
-        return true;
-    };
-protected: /* CONTROL */
-public: /* CONTROL */
-    struct SongList {
-        char *node;
-        SongList *next;
-        SongList(const char *_node) {
-            node = new char[255];
-            strcpy(node, _node);
-            next = NULL;
-        };
-        ~SongList();
-        void mkSongList(const char *_node) {
-            if (next)
-                next->mkSongList(_node);
-            else
-                next = new SongList(_node);
-        };
-        void add() {
-            cout << "Adding song: " << node << endl;
-            control->addAlbum(node);
-            if (next)
-                next->add();
-        };
-    };
-    SongList *sl;
-    bool addAlbum(char *_album) {
-        cout << "running add" << endl;
-        return (mpd_run_add(conn, _album));
-    };
-    bool addAlbum(Album *_sel) {
-        mpd_song *song;
-        if (!mpd_search_db_songs(conn, false)) {
-            err();
-            return false;
-        }
-        cout << "Searched db songs" << endl;
-        if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _sel->getName())) {
-            err();
-            return false;
-        }
-        cout << "Adding tag constraint" << endl;
-        if (!mpd_search_commit(conn)) {
-            err();
-            return false;
-        }
-        cout << "Searching commit" << endl;
-        while ((song = mpd_recv_song(conn)) != NULL) {
-            if (!sl)
-                sl = new SongList(mpd_song_get_uri(song));
-            else
-                sl->mkSongList(mpd_song_get_uri(song));
-            mpd_song_free(song);
-        }
-        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-            err();
-            return false;
-        }
-        if (!mpd_response_finish(conn)) {
-            err();
-            return false;
-        }
-        return true;
-    };
-    void addSongList() {
-        if (sl) {
-            cout << "Adding Songlist" << endl;
-            sl->add();
-            delete sl;
-            sl = NULL;
-        }
-    };
-    void addAlbum() {
-        mpd_run_clear(conn);
-        cout << "Cleared playlist" << endl;
-        addAlbum(sel);
-    };
-    bool isFirst(Album *_album) {
-        if (_album == albums)
-            return true;
+    cout << "Successful Update" << endl;
+    albums->setNum();
+    return true;
+}
+bool Control::addAlbum(char *_album) {
+    cout << "running add" << endl;
+    return (mpd_run_add(conn, _album));
+}
+bool Control::addAlbum(Album *_sel) {
+    mpd_song *song;
+    if (!mpd_search_db_songs(conn, false)) {
+        err();
         return false;
-    };
-    bool isSel(Album *_album) {
-        if (_album == sel)
-            return true;
+    }
+    cout << "Searched db songs" << endl;
+    if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _sel->getName())) {
+        err();
         return false;
-    };
-    unsigned int getColNum() {
-    // returns the number of collumns of albums that will be displayed
-        if (ceil(getViewWidth() / 160) > 0)
-            return (ceil(getViewWidth() / 160));
-        return 1;
-    };
-    unsigned int getRowNum() {
-    // returns the number of rows of albums that will be displayed
-        if (ceil(getViewHeight() / 160) > 0)
-            return (ceil(getViewHeight() / 160));
-        return 1;
-    };
-    void initDraw(int &argc, char **argv);
-    void selPrev() {
-        if (sel != albums)
-            sel = albums->getPrev(sel);
-        cout << "\n< Selecting previous album which is >:" << endl;
-        sel->printDir();
-        draw->setTitle(sel->getName());
-        cout << "< / Selecting previous DONE >" << endl;
-    };
-    void selNext() {
-        if (sel->getNext())
-            sel = sel->getNext();
-        cout << "\n< Selecting next album which is >:" << endl;
-        sel->printDir();
-        cout << "< / Selecting next DONE >" << endl;
-    };
-    bool isSelNext() {
-        if (sel->getNext())
-            return true;
+    }
+    cout << "Adding tag constraint" << endl;
+    if (!mpd_search_commit(conn)) {
+        err();
         return false;
-    };
-    Control() {
-        cout << "Control instantiating" << endl;
-        conn = mpd_connection_new(NULL, 0, 30000);
-        errStatus = false;
-        albums = NULL;
+    }
+    cout << "Searching commit" << endl;
+    while ((song = mpd_recv_song(conn)) != NULL) {
+        if (!sl)
+            sl = new SongList(mpd_song_get_uri(song));
+        else
+            sl->mkSongList(mpd_song_get_uri(song));
+        mpd_song_free(song);
+    }
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+        err();
+        return false;
+    }
+    if (!mpd_response_finish(conn)) {
+        err();
+        return false;
+    }
+    return true;
+}
+void Control::addSongList() {
+    if (sl) {
+        cout << "Adding Songlist" << endl;
+        sl->add();
+        delete sl;
         sl = NULL;
-        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS)
-            err();
-        else {
-            cout << "Control instantiated and updated" << endl;
-            update(MPD_TAG_ALBUM, "");
-        }
-    };
-    ~Control() {
-        if (IS_GUI)
-            delete draw;
-        delete albums;
-        //delete config;
-        albums = NULL;
-        mpd_connection_free(conn);
-        conn = NULL;
-        cout << "\n~Good bye~\n" << endl;
-    };
-    float getViewHeight() { // returns height of view in pixels
-        return (draw->getHeight());
-    };
-    float getViewWidth() { // returns width of view in pixels
-        return (draw->getWidth());
-    };
-    Album *getSel() { // returns the pointer to the selected album
-        return (sel);
-    };
-    unsigned int getSelY() { // returns the Y position of the selected album
-        return (sel->getY());
-    };
-    unsigned int getSelX() { // returns the X position of the selected album
-        return (sel->getX());
-    };
-    unsigned int getBottomY() { // returns the Y position of the last album in the album list
-        return (albums->getBottomY());
-    };
-    unsigned int getBottomViewY() { // returns the minimum Y position of view
-        if ((getBottomY() - getRowNum() + 1) > 3000000000)
-            return 0;
-        return (getBottomY() - getRowNum() + 1);
-    };
-    void play() { // Makes mpd start playing the playlist
-        mpd_run_play(conn);
-    };
-    void drawSprs() { // recursively draws all the album's art
-        albums->drawSpr();
-        albums->selAnim();
-    };
-    void drawSpr(sf::Sprite *spr) { //
-        if (IS_GUI) {
-            draw->drawSpr(spr);
-        }
-    };
-    void loadImg() { //
-        albums->loadImg();
-    };
-    bool isErr() { // Checks for error
-        return (errStatus);
-    };
-    Draw *getDraw() { // returns pointer to Draw class
-        return (draw);
-    };
-    char *getTag(const char *_album, mpd_tag_type type) { // returns tag
-        char *tagRet = new char[255];
-        mpd_song *song;
-        if (!mpd_search_db_songs(conn, false)) {
-            err();
-            return NULL;
-        }
-        if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _album)) {
-            err();
-            return NULL;
-        }
-        if (!mpd_search_commit(conn)) {
-            err();
-            return NULL;
-        }
-        if ((song = mpd_recv_song(conn)) != NULL) {
-            if (mpd_song_get_tag(song, type, 0) != NULL)
-                strcpy(tagRet, mpd_song_get_tag(song, type, 0));
-            else
-                tagRet = NULL;
-        }
-        mpd_song_free(song);
-        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-            err();
-            return NULL;
-        }
-        if (!mpd_response_finish(conn)) {
-            err();
-            return NULL;
-        }
-        return tagRet;
-    };
-    char *getDir(const char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
-        char *pathRet = new char[255];
-        mpd_song *song;
-        if (!mpd_search_db_songs(conn, false)) {
-            err();
-            return NULL;
-        }
-        if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _album)) {
-            err();
-            return NULL;
-        }
-        if (!mpd_search_commit(conn)) {
-            err();
-            return NULL;
-        }
-        if ((song = mpd_recv_song(conn)) != NULL)
-            strcpy(pathRet, mpd_song_get_uri(song));
-        mpd_song_free(song);
-        if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
-            err();
-            return NULL;
-        }
-        if (!mpd_response_finish(conn)) {
-            err();
-            return NULL;
-        }
-        return pathRet;
-    };
-    void printDirs() { // recursively prints all album info
-        albums->printDir(true);
-    };
-    void setImgs() { // recursively set's the album's sprites to cover art image
-        albums->setImg();
-    };
-    void sortAlbums(mpd_tag_type type = MPD_TAG_ARTIST);
-}; /*END OF CONTROL*/
+    }
+}
+void Control::addAlbum() {
+    mpd_run_clear(conn);
+    cout << "Cleared playlist" << endl;
+    addAlbum(sel);
+}
+bool Control::isFirst(Album *_album) {
+    if (_album == albums)
+        return true;
+    return false;
+}
+bool Control::isSel(Album *_album) {
+    if (_album == sel)
+        return true;
+    return false;
+}
+unsigned int Control::getColNum() {
+// returns the number of collumns of albums that will be displayed
+    if (ceil(getViewWidth() / 160) > 0)
+        return (ceil(getViewWidth() / 160));
+    return 1;
+}
+unsigned int Control::getRowNum() {
+// returns the number of rows of albums that will be displayed
+    if (ceil(getViewHeight() / 160) > 0)
+        return (ceil(getViewHeight() / 160));
+    return 1;
+}
+void Control::selPrev() {
+    if (sel != albums)
+        sel = albums->getPrev(sel);
+    cout << "\n< Selecting previous album which is >:" << endl;
+    char *msg = new char[256];
+    strcpy(msg, sel->getArtist());
+    strcat(msg, " - ");
+    strcat(msg, sel->getDate());
+    strcat(msg, " - ");
+    strcat(msg, sel->getName());
+    getDraw()->setText(msg);
+    delete [] msg;
+    msg = NULL;
+    sel->printDir();
+    draw->setTitle(sel->getName());
+    cout << "< / Selecting previous DONE >" << endl;
+}
+void Control::selNext() {
+    if (sel->getNext())
+        sel = sel->getNext();
+    char *msg = new char[256];
+    strcpy(msg, sel->getArtist());
+    strcat(msg, " - ");
+    strcat(msg, sel->getDate());
+    strcat(msg, " - ");
+    strcat(msg, sel->getName());
+    getDraw()->setText(msg);
+    delete [] msg;
+    msg = NULL;
+    cout << "\n< Selecting next album which is >:" << endl;
+    sel->printDir();
+    cout << "< / Selecting next DONE >" << endl;
+}
+bool Control::isSelNext() {
+    if (sel->getNext())
+        return true;
+    return false;
+}
+Control::Control() {
+    cout << "Control instantiating" << endl;
+    conn = mpd_connection_new(NULL, 0, 30000);
+    errStatus = false;
+    albums = NULL;
+    sl = NULL;
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS)
+        err();
+    else {
+        cout << "Control instantiated and updated" << endl;
+        update(MPD_TAG_ALBUM, "");
+    }
+}
+Control::~Control() {
+    if (IS_GUI)
+        delete draw;
+    delete albums;
+    //delete config;
+    albums = NULL;
+    mpd_connection_free(conn);
+    conn = NULL;
+    cout << "\n~Good bye~\n" << endl;
+}
+float Control::getViewHeight() { // returns height of view in pixels
+    return (draw->getHeight());
+}
+float Control::getViewWidth() { // returns width of view in pixels
+    return (draw->getWidth());
+}
+Album *Control::getSel() { // returns the pointer to the selected album
+    return (sel);
+}
+unsigned int Control::getSelY() { // returns the Y position of the selected album
+    return (sel->getY());
+}
+unsigned int Control::getSelX() { // returns the X position of the selected album
+    return (sel->getX());
+}
+unsigned int Control::getBottomY() { // returns the Y position of the last album in the album list
+    return (albums->getBottomY());
+}
+unsigned int Control::getBottomViewY() { // returns the minimum Y position of view
+    if ((getBottomY() - getRowNum() + 1) > 3000000000)
+        return 0;
+    return (getBottomY() - getRowNum() + 1);
+}
+void Control::play() { // Makes mpd start playing the playlist
+    mpd_run_play(conn);
+}
+void Control::drawSprs() { // recursively draws all the album's art
+    albums->drawSpr();
+    albums->selAnim();
+}
+void Control::drawSpr(sf::Sprite *spr) { //
+    if (IS_GUI) {
+        draw->drawSpr(spr);
+    }
+}
+void Control::loadImg() { //
+    albums->loadImg();
+}
+bool Control::isErr() { // Checks for error
+    return (errStatus);
+}
+Draw *Control::getDraw() { // returns pointer to Draw class
+    return (draw);
+}
+char *Control::getTag(const char *_album, mpd_tag_type type) { // returns tag
+    char *tagRet = new char[255];
+    mpd_song *song;
+    if (!mpd_search_db_songs(conn, false)) {
+        err();
+        return NULL;
+    }
+    if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _album)) {
+        err();
+        return NULL;
+    }
+    if (!mpd_search_commit(conn)) {
+        err();
+        return NULL;
+    }
+    if ((song = mpd_recv_song(conn)) != NULL) {
+        if (mpd_song_get_tag(song, type, 0) != NULL)
+            strcpy(tagRet, mpd_song_get_tag(song, type, 0));
+        else
+            tagRet = NULL;
+    }
+    mpd_song_free(song);
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+        err();
+        return NULL;
+    }
+    if (!mpd_response_finish(conn)) {
+        err();
+        return NULL;
+    }
+    return tagRet;
+}
+char *Control::getDir(const char *_album) { // returns directory (sans the library directory prefix which is defined in MPD_MUSIC_DIR) of first song in an album from given album name
+    char *pathRet = new char[255];
+    mpd_song *song;
+    if (!mpd_search_db_songs(conn, false)) {
+        err();
+        return NULL;
+    }
+    if (!mpd_search_add_tag_constraint(conn, MPD_OPERATOR_DEFAULT, MPD_TAG_ALBUM, _album)) {
+        err();
+        return NULL;
+    }
+    if (!mpd_search_commit(conn)) {
+        err();
+        return NULL;
+    }
+    if ((song = mpd_recv_song(conn)) != NULL)
+        strcpy(pathRet, mpd_song_get_uri(song));
+    mpd_song_free(song);
+    if (mpd_connection_get_error(conn) != MPD_ERROR_SUCCESS) {
+        err();
+        return NULL;
+    }
+    if (!mpd_response_finish(conn)) {
+        err();
+        return NULL;
+    }
+    return pathRet;
+}
+void Control::printDirs() { // recursively prints all album info
+    albums->printDir(true);
+}
+void Control::setImgs() { // recursively set's the album's sprites to cover art image
+    albums->setImg();
+}
 /////////////////////////////////////////////////////////////////////
 // FUNCTIONS
 /////////////////////////////////////////////////////////////////////
@@ -670,7 +663,7 @@ Control::SongList::~SongList() {
     delete [] node;
     if (control->sl == this)
         control->sl = NULL;
-};
+}
 char *Album::getName() { // returns name of album
     return (name);
 }
@@ -687,7 +680,16 @@ char *Album::dirTrim() { // returns directory of album
     cout << "Trimmed dir: " << imgDir << endl;
     return (dir);
 }
-const char *Album::getArtist() { // returns directory of album
+const char *Album::getDate() { // returns date of album
+    if (date == NULL)
+        date = control->getTag(getName(), MPD_TAG_DATE);
+    if (date == NULL) {
+        cout << "getDate: no date, name: " << getName() << endl;
+        return ("<No date>");
+    }
+    return (date);
+}
+const char *Album::getArtist() { // returns artist of album
     if (artist == NULL)
         artist = control->getTag(getName(), MPD_TAG_ARTIST);
     if (artist == NULL) {
@@ -743,7 +745,7 @@ void Album::setImg() {
     }
 }
 void Album::drawSpr() { // Draw album's sprite
-    spr->SetScale(WIN_WIDTH_FLOAT / control->getColNum() / img->GetWidth(), WIN_HEIGHT_FLOAT / control->getRowNum() / img->GetHeight());
+    spr->SetScale(ALBUM_WIN_WIDTH_FLOAT / control->getColNum() / img->GetWidth(), ALBUM_WIN_HEIGHT_FLOAT / control->getRowNum() / img->GetHeight());
     spr->SetPosition(0.f + (spr->GetSize().x * getX()), 0.f + (spr->GetSize().y * getY(true)));
     spr->SetColor(sf::Color(255, 255, 255, 255));
     if (control->isSel(this)) {
@@ -925,14 +927,10 @@ void Draw::initLoop() {
                     while ((control->getSelY() + 1) < (getViewY() + control->getRowNum()) && (control->getSelY() < control->getBottomY()))
                         control->selNext();
                     for (unsigned int i = 0; i < control->getColNum(); i++) {
-                        if (!control->getSel()->getNext())
+                        if (control->getSelX() == 0)
                             i = control->getColNum();
-                        else {
-                            if (control->getSel()->getNext()->getX() == 0)
-                                i = control->getColNum();
-                            else
-                            control->selNext();
-                        }
+                        else
+                            control->selPrev();
                     }
                 } else
                     control->selNext();
@@ -958,9 +956,10 @@ void Draw::initLoop() {
             viewY--;
         }
         control->drawSprs();
+        drawBar();
         app->Display(); // Display the result
     }
-};
+}
 bool getInput() {
     int input;
     cin >> input;
@@ -969,12 +968,12 @@ bool getInput() {
     if (control->isErr() || input == 0)
         return false;
     return true;
-};
+}
 void cleanUp() {
     cout << "Cleaning up:" << endl;
     delete control;
    //exit(0);
-};
+}
 /////////////////////////////////////////////////////////////////////
 // MAIN
 /////////////////////////////////////////////////////////////////////

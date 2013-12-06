@@ -2,6 +2,7 @@
 //
 //
 #define MPD_MUSIC_DIR "/var/lib/mpd/music/"
+#define FONT_DIR "/usr/share/fonts/corefonts/arial.ttf"
 //
 #define UP_KEY          K
 #define DOWN_KEY        J

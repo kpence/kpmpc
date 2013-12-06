@@ -20,7 +20,6 @@
 #define ALBUM_WIN_WIDTH_FLOAT (WIN_WIDTH_FLOAT - 0.f)
 #define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 40.f)
 #define IS_GUI true
-#define FONT_DIR "/usr/share/fonts/corefonts/arial.ttf"
 /* using */
 using std::cout;
 using std::cin;

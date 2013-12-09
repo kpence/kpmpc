@@ -158,6 +158,7 @@ private: /* CONTROL */
     char *filter;
     void err();
     bool update(mpd_tag_type type, const char *value);
+    bool limit;
 protected: /* CONTROL */
 public: /* CONTROL */
     bool addAlbum(char *_album);
@@ -166,11 +167,15 @@ public: /* CONTROL */
     void addAlbum();
     bool isFirst(Album *_album);
     bool isSel(Album *_album);
+    bool isLimit();
+    void toggleLimit();
     unsigned int getColNum();
     unsigned int getRowNum();
     void initDraw(int &argc, char **argv);
     void searchPrev();
     void searchNext();
+    Album *getSearchNext(Album *_search);
+    Album *getSearchPrev(Album *_search);
     void selPrev(bool wrap = false);
     void selNext(bool wrap = false);
     bool isSelNext();
@@ -179,6 +184,7 @@ public: /* CONTROL */
     float getViewHeight();
     float getViewWidth();
     Album *getSel();
+    void setSel(Album *_sel);
     int getMode();
     void setMode(int _mode);
     const char *getFilter();

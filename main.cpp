@@ -254,7 +254,7 @@ void Draw::initBar() {
         text = new sf::String();
         text->SetFont(*font);
         text->SetSize(100);
-        text->SetText("<Status Bar>");
+        text->SetText("");
         text->SetColor(sf::Color::White);
     }
 }
@@ -277,11 +277,11 @@ void Draw::updateBar() {
     strcat(msg, " - ");
     strcat(msg, control->getSel()->getName());
     if (control->getMode() == MODE_TYPING_FILTER)
-        strcat(msg, " - SEARCH: ");
+        strcat(msg, " - /");
     if (control->getFilter() != NULL) {
         if (strcmp(control->getFilter(), "") != 0) {
             if (control->getMode() != MODE_TYPING_FILTER)
-                strcat(msg, " (s: ");
+                strcat(msg, " (/");
             strcat(msg, control->getFilter());
             if (control->getMode() != MODE_TYPING_FILTER)
                 strcat(msg, ")");
@@ -462,10 +462,50 @@ void Control::setMode(int _mode) {
     mode = _mode;
     draw->updateBar();
 }
+Album *Control::getSearchNext(Album *_search) {
+    Album *_start = _search;
+    if (filter != NULL) {
+        if (filter[0] != '\0' && strcmp(filter, "") != 0) {
+            if (_search->getNext() != NULL)
+                _search = _search->getNext();
+            else
+                _search = albums;
+            while (strstr(_search->getArtist(), getFilter()) == NULL && strstr(_search->getName(), getFilter()) == NULL) {
+                if (_search->getNext())
+                    _search = _search->getNext();
+                else
+                    _search = albums;
+                if (_search == _start)
+                    return NULL;
+            }
+        }
+    }
+    return _search;
+}
+Album *Control::getSearchPrev(Album *_search) {
+    Album *_start = _search;
+    if (filter != NULL) {
+        if (filter[0] != '\0' && strcmp(filter, "") != 0) {
+            if (albums->getPrev(_search))
+                _search = albums->getPrev(_search);
+            else
+                _search = albums->getLast();
+            while (strstr(_search->getArtist(), getFilter()) == NULL && strstr(_search->getName(), getFilter()) == NULL) {
+                if (albums->getPrev(_search))
+                    _search = albums->getPrev(_search);
+                else
+                    _search = albums->getLast();
+                if (_search == _start)
+                    return NULL;
+            }
+        }
+    }
+    return _search;
+}
 void Control::searchNext() {
     Album *_start = sel;
     if (filter != NULL) {
-        if (strcmp(filter, "") != 0) {
+        if (filter[0] != '\0' && strcmp(filter, "") != 0) {
             selNext(true);
             while (strstr(sel->getArtist(), getFilter()) == NULL && strstr(sel->getName(), getFilter()) == NULL) {
                 selNext(true);
@@ -478,7 +518,7 @@ void Control::searchNext() {
 void Control::searchPrev() {
     Album *_start = sel;
     if (filter != NULL) {
-        if (strcmp(filter, "") != 0) {
+        if (filter[0] != '\0' && strcmp(filter, "") != 0) {
             selPrev(true);
             while (strstr(sel->getArtist(), getFilter()) == NULL && strstr(sel->getName(), getFilter()) == NULL) {
                 selPrev(true);
@@ -489,24 +529,32 @@ void Control::searchPrev() {
     }
 }
 void Control::selPrev(bool wrap) {
-    if (sel != albums)
-        sel = albums->getPrev(sel);
-    else if (wrap)
-        sel = albums->getLast();
-    draw->updateBar();
-    cout << "\n< Selecting previous album which is >:" << endl;
-    sel->printDir();
-    cout << "< / Selecting previous DONE >" << endl;
+    if (getSearchPrev(sel) != NULL && isLimit())
+        searchPrev();
+    else if (!isLimit()) {
+        if (sel != albums)
+            sel = albums->getPrev(sel);
+        else if (wrap)
+            sel = albums->getLast();
+        draw->updateBar();
+        cout << "\n< Selecting previous album which is >:" << endl;
+        sel->printDir();
+        cout << "< / Selecting previous DONE >" << endl;
+    }
 }
 void Control::selNext(bool wrap) {
-    if (sel->getNext())
-        sel = sel->getNext();
-    else if (wrap)
-        sel = albums;
-    draw->updateBar();
-    cout << "\n< Selecting next album which is >:" << endl;
-    sel->printDir();
-    cout << "< / Selecting next DONE >" << endl;
+    if (getSearchNext(sel) != NULL && isLimit())
+        searchNext();
+    else if (!isLimit()) {
+        if (sel->getNext())
+            sel = sel->getNext();
+        else if (wrap)
+            sel = albums;
+        draw->updateBar();
+        cout << "\n< Selecting next album which is >:" << endl;
+        sel->printDir();
+        cout << "< / Selecting next DONE >" << endl;
+    }
 }
 bool Control::isSelNext() {
     if (sel->getNext())
@@ -518,6 +566,7 @@ Control::Control() {
     mode = MODE_NORMAL;
     filter = new char[256];
     rmFilter();
+    limit = false;
     conn = mpd_connection_new(NULL, 0, 30000);
     errStatus = false;
     albums = NULL;
@@ -546,6 +595,9 @@ float Control::getViewHeight() { // returns height of view in pixels
 }
 float Control::getViewWidth() { // returns width of view in pixels
     return (draw->getWidth());
+}
+void Control::setSel(Album *_sel) { // sets the pointer to the selected album
+    sel = _sel;
 }
 Album *Control::getSel() { // returns the pointer to the selected album
     return (sel);
@@ -596,8 +648,13 @@ void Control::charCatFilter(const char _filter) {
                 while (filter[0] != '\0' && filter[std::max((long unsigned int)0, strlen(filter) - 1)] != ' ')
                     filter[strlen(filter) - 1] = '\0';
             }
-            else if (_filter > 31)
+            else if (_filter > 31) {
                 strncat(filter, &_filter, 1);
+                if (getSearchNext(getSel()) != getSel()->getNext() && getSearchNext(getSel()) != albums->getPrev(getSel()))
+                    searchNext();
+                else if (getSearchPrev(getSearchNext(getSel())) != getSel())
+                    searchNext();
+            }
         }
     }
     getDraw()->updateBar();
@@ -619,6 +676,21 @@ void Control::loadImg() { //
 }
 bool Control::isErr() { // Checks for error
     return (errStatus);
+}
+void Control::toggleLimit() { // returns pointer to Draw class
+    if (limit)
+        limit = false;
+    else
+        limit = true;
+}
+bool Control::isLimit() { // returns pointer to Draw class
+    if (filter == NULL)
+        return false;
+    else {
+        if (filter[0] == '\0' && strcmp(filter, "") == 0)
+            return false;
+    }
+    return (limit);
 }
 Draw *Control::getDraw() { // returns pointer to Draw class
     return (draw);
@@ -840,8 +912,10 @@ void Album::drawSpr() { // Draw album's sprite
         spr->SetColor(sf::Color(255, 255, 255, 128));
         spr->Move((selAnimY / 10.f) * 4.f, (selAnimY / 10.f) * 4.f);
     }
-    if (next)
+    if (next != NULL && !control->isLimit())
         next->drawSpr();
+    if (control->getSearchNext(this) != NULL && control->isLimit())
+        control->getSearchNext(this)->drawSpr();
     if (strcmp(imgDir, "<No image>") != 0)
         control->drawSpr(spr);
 }
@@ -920,7 +994,10 @@ void Draw::selVMiddle() {
     //if (control->getRowNum() - 1)
     //    unsigned int _f = (control->getRowNum() - 1) / 2;
     //else
-    for (unsigned int f = 0; f < control->getRowNum() / 2/*_f*/; f++) {
+    unsigned int _f = ceil(control->getRowNum() / 2);
+    if (_f > 0 && floor(control->getRowNum() / 2) != ceil(control->getRowNum() / 2))
+        _f--;
+    for (unsigned int f = 0; f < _f; f++) {
         for (unsigned int i = 0; i < control->getColNum(); i++)
             control->selPrev();
     }
@@ -969,6 +1046,7 @@ void Draw::selEnd() {
 }
 void Draw::initLoop() {
     int ignoreFirstChar = 2;
+    Album *markSel = NULL;
     while (running) {
         // Manage Events
         while (app->GetEvent(*event)) {
@@ -987,6 +1065,8 @@ void Draw::initLoop() {
                     control->rmFilter();
                     control->setMode(MODE_NORMAL);
                     updateBar();
+                    control->setSel(markSel);
+                    markSel = NULL;
                 } else if (txt == 13 || txt == 10) {
                     control->setMode(MODE_NORMAL);
                     updateBar();
@@ -996,7 +1076,6 @@ void Draw::initLoop() {
             }
             if (ignoreFirstChar > 0)
                 ignoreFirstChar -= 1;
-
             // Key pressed
             if (event->Type == sf::Event::KeyPressed && control->getMode() == MODE_NORMAL) {
                 switch (event->Key.Code) {
@@ -1008,11 +1087,15 @@ void Draw::initLoop() {
                         break;
                     case sf::Key::Slash:
                         if (!event->Key.Control) {
+                            markSel = control->getSel();
                             control->setMode(MODE_TYPING_FILTER);
                             control->rmFilter();
                             updateBar();
                             ignoreFirstChar = 2;
                         }
+                        break;
+                    case sf::Key::T:
+                        control->toggleLimit();
                         break;
                     case sf::Key::N:
                         if (!event->Key.Shift)

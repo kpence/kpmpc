@@ -35,11 +35,12 @@ void Draw::loop() {
             y = WIN_HEIGHT_FLOAT / getHeight();
 
         if (ii == (unsigned int)sel)
-            mpd->album[ii].selAnimY = 24.f;
+            mpd->album[ii].selAnimY = 32.f;
         else
-            mpd->album[ii].selAnimY /= 2;
+            mpd->album[ii].selAnimY /= 1.5;
 
         mpd->album[ii].spr.setPosition((float)((int)ii % getWidth()) * x, (float)floor((int)ii / getWidth() - viewY) * y + mpd->album[ii].selAnimY / 2);
+        mpd->album[ii].spr.setColor(sf::Color(255, 255, 255, 127 + 128 * (1 - (mpd->album[ii].selAnimY / 32.f))));
         mpd->album[ii].spr.setScale(x / w, y / h);
         sys->app.draw(mpd->album[ii].spr);
     }

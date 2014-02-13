@@ -148,14 +148,18 @@ bool Sys::testCmd(std::string &_cmd) {
     } else if (_cmd.compare(":mvcur 0,+1<cr>") == 0) {
         draw->sel += draw->getWidth();
         draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
-        if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() - 1 + draw->viewY))
+        if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
             draw->viewY++;
     } else if (_cmd.compare(":mvcur +1,0<cr>") == 0) {
         draw->sel++;
         draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
+        if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
+            draw->viewY++;
     } else if (_cmd.compare(":mvcur -1,0<cr>") == 0) {
         draw->sel -= 1;
         draw->sel = std::max(0, draw->sel);
+        if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
+            draw->viewY--;
     } else if (_cmd.compare(":quit<cr>") == 0) {
         isRunning = false;
     } else if (_cmd.compare(":play<cr>") == 0) {

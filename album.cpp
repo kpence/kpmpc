@@ -19,7 +19,6 @@ Album::Album(const char *_name): selAnimY(0.f), dir(""), artist(""), date(""), i
 
 const char *Album::dirTrim(std::string _dir) {
     _dir.erase(_dir.length() - 1);
-    _dir.erase(_dir.length() - 1);
     while (_dir[_dir.length() - 1] != '/')
         _dir.erase(_dir.length() - 1);
     return _dir.c_str();
@@ -31,6 +30,7 @@ void Album::buildTags()
 void Album::build() {
     std::string _dir = DIR_BASE;
     _dir += mpd->getDir(name);
+    _dir = dirTrim(_dir);
 
     bool success = false;
     if (!success) { dir = _dir; dir += "front.jpg"; success = tex.loadFromFile(dir); }

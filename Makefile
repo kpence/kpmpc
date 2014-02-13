@@ -1,15 +1,13 @@
 CC = g++
 CFLAGS = -g -Wall
 SRCS = main.cpp
-MAIN = main
+MAIN = kpmpc
 # LFLAGS = -L/home/kpence/lib
 # INCLUDES = 
 LIBS = -lm
 LIBS += -lmpdclient
-LIBS += -lGLEW -lglut
-LIBS += -lpng -ljpeg
-LIBS += -lsfml-audio -lsfml-graphics -lsfml-network -lsfml-window -lsfml-system
-LIBS += -lboost_filesystem
+LIBS += -lsfml-graphics -lsfml-window -lsfml-system
+LIBS += -lboost_system -lboost_filesystem
 #
 OBJS = $(SRCS:.cpp=.o)
 

@@ -1,0 +1,1 @@
+2014-02-12 -- Make it so that it detects if there's any mapping that has the keys, if it doesn't then automatically clear the comand and tell user, "no key mapping", it should accept anything that starts with : or /

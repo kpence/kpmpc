@@ -17,7 +17,7 @@
 #include "main.h"
 
 /* helpers */
-#include "config.h"
+//#include "config.h"
 //#include "list.h"
 
 /* headers */

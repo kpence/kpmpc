@@ -25,6 +25,9 @@ const char *Album::dirTrim(std::string _dir) {
     return _dir.c_str();
 }
 
+void Album::buildTags()
+    { artist = mpd->getTag(name.c_str(), MPD_TAG_ARTIST); }
+
 void Album::build() {
     std::string _dir = DIR_BASE;
     _dir += mpd->getDir(name);
@@ -46,7 +49,6 @@ void Album::build() {
     if (!success) { dir = ""; }
     spr.setTexture(tex);
 
-    artist = mpd->getTag(name.c_str(), MPD_TAG_ARTIST);
 }
 
 Album::~Album() {

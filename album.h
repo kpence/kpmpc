@@ -27,6 +27,7 @@ public:
     ~Album();
     void clean();
     void loop();
+    void buildTags();
 
     /* grid/anim functions */
     void selAnim();
@@ -39,4 +40,11 @@ public:
     const char *dirTrim(std::string _dir);
     void printDir(bool recurs);
     void printDir();
+};
+
+/* helper struct for sorting */
+bool helper_sort(Album i, Album j) {
+    if (i.artist == j.artist)
+        return (i.name < j.name);
+    return (i.artist < j.artist);
 };

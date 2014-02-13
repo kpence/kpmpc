@@ -34,6 +34,7 @@ void Sys::buildMap() {
     m = Map("<c-c>", "<clear>", false); map.push_back(m);
     m = Map("<esc>", "<clear>", false); map.push_back(m);
     m = Map("<space>", ":play<cr>", true); map.push_back(m);
+    m = Map("<cr>", ":play<cr>", true); map.push_back(m);
 }
 
 Sys::~Sys() {
@@ -189,4 +190,9 @@ bool Sys::addAlbum(const char *a) {
     if (!mpd_response_finish(mpd->conn))
         return false;
     return true;
+}
+
+void Sys::sortAlbums(mpd_tag_type type) {
+    std::cout << "" << std::endl;
+    std::sort(mpd->album.begin(), mpd->album.end(), helper_sort);
 }

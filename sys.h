@@ -44,5 +44,6 @@ public:
 
     /* music */
     bool addAlbum(const char *a);
+    void sortAlbums(mpd_tag_type type);
 } _sys;
 Sys *sys;

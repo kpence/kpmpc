@@ -54,6 +54,9 @@ bool Mpd::update(mpd_tag_type type, const char *value) {
 
     cout << "Successful Update" << endl;
     for (std::vector<Album>::iterator i = album.begin(); i != album.end(); ++i)
+        i->buildTags();
+    sys->sortAlbums(MPD_TAG_UNKNOWN);
+    for (std::vector<Album>::iterator i = album.begin(); i != album.end(); ++i)
         i->build();
     return true;
 }

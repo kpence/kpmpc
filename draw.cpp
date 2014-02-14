@@ -39,7 +39,7 @@ void Draw::loop() {
         else
             mpd->album[ii].selAnimY /= 1.5;
 
-        mpd->album[ii].spr.setPosition((float)((int)ii % getWidth()) * x, (float)floor((int)ii / getWidth() - viewY) * y + mpd->album[ii].selAnimY / 2);
+        mpd->album[ii].spr.setPosition((float)((int)ii % getWidth()) * x, (float)floor((int)ii / getWidth() - viewY) * y + mpd->album[ii].selAnimY / 3);
         mpd->album[ii].spr.setColor(sf::Color(255, 255, 255, 127 + 128 * (1 - (mpd->album[ii].selAnimY / 32.f))));
         mpd->album[ii].spr.setScale(x / w, y / h);
         sys->app.draw(mpd->album[ii].spr);

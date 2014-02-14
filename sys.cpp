@@ -141,7 +141,8 @@ bool Sys::remapCmd(std::string &_cmd) {
 
 bool Sys::testCmd(std::string &_cmd) {
     if (_cmd.compare(":mvcur 0,-1<cr>") == 0) {
-        draw->sel -= draw->getWidth();
+        if (floor((float)draw->sel / draw->getWidth()) > 0)
+            draw->sel -= draw->getWidth();
         draw->sel = std::max(0, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
             draw->viewY--;

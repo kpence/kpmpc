@@ -35,6 +35,14 @@ void Sys::buildMap() {
     m = Map("<esc>", "<clear>", false); map.push_back(m);
     m = Map("<space>", ":play<cr>", true); map.push_back(m);
     m = Map("<cr>", ":play<cr>", true); map.push_back(m);
+
+    //std::ifstream config;
+    //std::string line;
+    //config.open("/home/kpence/.kpmpcrc");
+    //config >> line; std::cout << line << endl;
+    //config >> line; std::cout << line << endl;
+    //config >> line; std::cout << line << endl;
+    //config >> line; std::cout << line << endl;
 }
 
 Sys::~Sys() {

@@ -61,8 +61,8 @@ bool Mpd::update(mpd_tag_type type, const char *value) {
     return true;
 }
 
-char *Mpd::getTag(const char *_album, mpd_tag_type type) {
-    char *tagRet = new char[255];
+std::string Mpd::getTag(const char *_album, mpd_tag_type type) {
+    std::string tagRet = "";
     mpd_song *song;
     if (!mpd_search_db_songs(conn, false)) { err(); return NULL; }
 
@@ -73,15 +73,15 @@ char *Mpd::getTag(const char *_album, mpd_tag_type type) {
     if (type == MPD_TAG_UNKNOWN) {
         if ((song = mpd_recv_song(conn)) != NULL) {
             if (mpd_song_get_uri(song) != NULL)
-                strcpy(tagRet, mpd_song_get_uri(song));
+                tagRet = mpd_song_get_uri(song);
             else
-                tagRet = NULL;
+                tagRet = "";
         }
     } else if ((song = mpd_recv_song(conn)) != NULL) {
         if (mpd_song_get_tag(song, type, 0) != NULL)
-            strcpy(tagRet, mpd_song_get_tag(song, type, 0));
+            tagRet = mpd_song_get_tag(song, type, 0);
         else
-            tagRet = NULL;
+            tagRet = "";
     }
 
     mpd_song_free(song);
@@ -93,5 +93,5 @@ char *Mpd::getTag(const char *_album, mpd_tag_type type) {
     return tagRet;
 }
 
-const char *Mpd::getDir(std::string _album)
+std::string Mpd::getDir(std::string _album)
     { return getTag(_album.c_str(), MPD_TAG_UNKNOWN); }

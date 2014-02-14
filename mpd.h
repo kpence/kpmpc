@@ -65,8 +65,8 @@ public:
 
     /* mpd functions */
     bool update(mpd_tag_type type, const char *value);
-    char *getTag(const char *_album, mpd_tag_type type);
-    const char *getDir(std::string _album);
+    std::string getTag(const char *_album, mpd_tag_type type);
+    std::string getDir(std::string _album);
     void printDirs();
 
 } _mpd;

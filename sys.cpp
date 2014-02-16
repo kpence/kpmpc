@@ -48,7 +48,7 @@ void Sys::buildMap() {
             if (!config.eof()) { ++i; config >> line[0]; }
             if (!config.eof()) { ++i; config >> line[1]; }
             if (!config.eof()) { ++i; config >> line[2]; }
-            if (i != 3) break;
+            if (i != 3) { while (config.get() != '\n' && !config.eof()); break; }
 
             m = Map(line[0], line[1], true);
             std::cout << line[0] << std::endl;

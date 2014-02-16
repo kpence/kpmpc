@@ -1,0 +1,18 @@
+# This config file needs to be placed in ~/.kpmpcrc
+map h :mvcur<-1,0><cr> w
+map l :mvcur<+1,0><cr> w
+map k :mvcur<0,-1><cr> w
+map j :mvcur<0,+1><cr> w
+
+map <space> :play<cr> w
+map <cr> :play<cr> w
+map p :play<cr> w
+
+map <c-j> <cr> p
+map <enter> <cr> p
+
+map <c-c> <clear> p
+map <esc> <clear> p
+
+map qq :quit<cr> w
+map ZZ :quit<cr> w

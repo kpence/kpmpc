@@ -23,7 +23,7 @@ void Sys::build() {
 }
 
 void Sys::buildMap() {
-    Map m("<c-j>", "<cr>", false); map.push_back(m);
+    /*Map m("<c-j>", "<cr>", false); map.push_back(m);
     m = Map("<enter>", "<cr>", false); map.push_back(m);
     m = Map("h", ":mvcur<-1,0><cr>", true); map.push_back(m);
     m = Map("l", ":mvcur<+1,0><cr>", true); map.push_back(m);
@@ -34,7 +34,7 @@ void Sys::buildMap() {
     m = Map("<c-c>", "<clear>", false); map.push_back(m);
     m = Map("<esc>", "<clear>", false); map.push_back(m);
     m = Map("<space>", ":play<cr>", true); map.push_back(m);
-    m = Map("<cr>", ":play<cr>", true); map.push_back(m);
+    m = Map("<cr>", ":play<cr>", true); map.push_back(m);*/
 
     std::ifstream config;
     std::string line[3];
@@ -42,18 +42,21 @@ void Sys::buildMap() {
     int i = 0;
     while (!config.eof()) {
         Map m("", "", false);
-        if (!config.eof()) { ++i; config >> line[0]; }
-        if (!config.eof()) { ++i; config >> line[1]; }
-        if (!config.eof()) { ++i; config >> line[2]; }
-        if (i != 3) break;
+        if (!config.eof()) { config >> line[0]; }
+        if (line[0][0] == '#') while (config.get() != '\n');
+        if (line[0].compare("map") == 0) {
+            if (!config.eof()) { ++i; config >> line[0]; }
+            if (!config.eof()) { ++i; config >> line[1]; }
+            if (!config.eof()) { ++i; config >> line[2]; }
+            if (i != 3) break;
 
-        m = Map(line[0], line[1], true);
-        std::cout << line[0] << std::endl;
-        std::cout << line[1] << std::endl;
-        std::cout << line[2] << std::endl;
-        if (line[2].compare("part") == 0) m.whole = false;
-        map.push_back(m);
-
+            m = Map(line[0], line[1], true);
+            std::cout << line[0] << std::endl;
+            std::cout << line[1] << std::endl;
+            std::cout << line[2] << std::endl;
+            if (line[2].compare("p") == 0 || line[2].compare("part") == 0) m.whole = false;
+            map.push_back(m);
+        }
         i = 0; line[0] = ""; line[1] = ""; line[2] = "";
     }
 }

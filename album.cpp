@@ -28,28 +28,23 @@ void Album::buildTags()
     { artist = mpd->getTag(name.c_str(), MPD_TAG_ARTIST); }
 
 void Album::build() {
+    std::vector<std::string> artPath;
     std::string _dir = DIR_BASE;
     _dir += mpd->getDir(name);
     _dir = dirTrim(_dir);
 
-    bool success = false;
-    if (!success) { dir = _dir; dir += "front.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "front.png"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "cover.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "cover.png"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "folder.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "folder.png"; success = tex.loadFromFile(dir); }
-    _dir = dirTrim(_dir);
-    if (!success) { dir = _dir; dir += "front.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "front.png"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "cover.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "cover.png"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "folder.jpg"; success = tex.loadFromFile(dir); }
-    if (!success) { dir = _dir; dir += "folder.png"; success = tex.loadFromFile(dir); }
+    success = false;
+    
+    artPath = sys->artPath; while (!artPath.empty()) { loadArt(_dir, artPath[0]); artPath.erase(artPath.begin()); }
+    artPath = sys->artPath; while (!artPath.empty()) { loadArt(dirTrim(_dir), artPath[0]); artPath.erase(artPath.begin()); }
     if (!success) { dir = ""; }
+
     spr.setTexture(tex);
 
 }
+
+void Album::loadArt(std::string _dir, std::string path)
+    { std::cout << "Loading album art: " << _dir << path << " (" << name << ") ... " << std::endl; if (!success) { dir = _dir; dir += path; success = tex.loadFromFile(dir); } }
 
 Album::~Album() {
 }

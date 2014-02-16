@@ -11,6 +11,9 @@ private:
     void reset();
 protected:
 public:
+    /* helper variables */
+    bool success;
+
     /* variables */
     sf::Sprite spr;
     sf::Texture tex;
@@ -37,6 +40,7 @@ public:
     unsigned int getY();
 
     /* dir functions */
+    void loadArt(std::string _dir, std::string path);
     const char *dirTrim(std::string _dir);
     void printDir(bool recurs);
     void printDir();

@@ -27,11 +27,12 @@ public:
     std::string cmd;
     std::vector<Map> map;
     std::vector<std::string> sl;
+    std::vector<std::string> artPath;
 
     /* main functions */
     Sys();
     void build();
-    void buildMap();
+    void buildConfig();
     ~Sys();
     void clean();
     void loop();

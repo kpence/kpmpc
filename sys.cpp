@@ -19,10 +19,10 @@ Sys::Sys(): app(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT), "kpmpc-1.0"), cmd("") {
 }
 
 void Sys::build() {
-    buildMap();
+    buildConfig();
 }
 
-void Sys::buildMap() {
+void Sys::buildConfig() {
     /*Map m("<c-j>", "<cr>", false); map.push_back(m);
     m = Map("<enter>", "<cr>", false); map.push_back(m);
     m = Map("h", ":mvcur<-1,0><cr>", true); map.push_back(m);
@@ -36,14 +36,26 @@ void Sys::buildMap() {
     m = Map("<space>", ":play<cr>", true); map.push_back(m);
     m = Map("<cr>", ":play<cr>", true); map.push_back(m);*/
 
-    std::ifstream config;
+    std::ifstream config; config.open("/home/kpence/.kpmpcrc");
     std::string line[3];
-    config.open("/home/kpence/.kpmpcrc");
-    int i = 0;
+    int i;
+
     while (!config.eof()) {
         Map m("", "", false);
+        i = 0; line[0] = ""; line[1] = ""; line[2] = "";
+
         if (!config.eof()) { config >> line[0]; }
+
+        /* comment */
         if (line[0][0] == '#') while (config.get() != '\n');
+
+        /* cover art file paths */
+        if (line[0].compare("art-path") == 0 || line[0].compare("art") == 0 || line[0].compare("art-file-path") == 0) {
+            if (!config.eof()) { ++i; config >> line[0]; }
+            artPath.push_back(line[0]);
+        }
+
+        /* input mappings */
         if (line[0].compare("map") == 0) {
             if (!config.eof()) { ++i; config >> line[0]; }
             if (!config.eof()) { ++i; config >> line[1]; }
@@ -51,14 +63,12 @@ void Sys::buildMap() {
             if (i != 3) { while (config.get() != '\n' && !config.eof()); break; }
 
             m = Map(line[0], line[1], true);
-            std::cout << line[0] << std::endl;
-            std::cout << line[1] << std::endl;
-            std::cout << line[2] << std::endl;
+            std::cout << "mapping added: " << line[0] << ", " << line[1] << ", " << line[2] << std::endl;
             if (line[2].compare("p") == 0 || line[2].compare("part") == 0) m.whole = false;
             map.push_back(m);
         }
-        i = 0; line[0] = ""; line[1] = ""; line[2] = "";
     }
+
 }
 
 Sys::~Sys() {

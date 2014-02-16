@@ -1,4 +1,6 @@
-# This config file needs to be placed in ~/.kpmpcrc
+# This is the default template ~/.kpmpcrc, kpmpc's config file
+
+# default keyboard mappings
 map h :mvcur<-1,0><cr> w
 map l :mvcur<+1,0><cr> w
 map k :mvcur<0,-1><cr> w
@@ -16,3 +18,11 @@ map <esc> <clear> p
 
 map qq :quit<cr> w
 map ZZ :quit<cr> w
+
+# default art file paths
+art front.jpg
+art front.png
+art cover.jpg
+art cover.png
+art folder.jpg
+art folder.png

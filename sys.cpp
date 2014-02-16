@@ -15,7 +15,7 @@ void termSys() {
 }
 
 /* main functions */
-Sys::Sys(): app(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT), "kpmpc-1.0"), cmd("") {
+Sys::Sys(): app(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT), "kpmpc-1.0"), cmd(""), tileSize(0) {
 }
 
 void Sys::build() {
@@ -48,6 +48,10 @@ void Sys::buildConfig() {
 
         /* comment */
         if (line[0][0] == '#') while (config.get() != '\n');
+
+        /* cover art tile size */
+        if (line[0].compare("tile-size") == 0 || line[0].compare("art-size") == 0 || line[0].compare("art-tile-size") == 0)
+            if (!config.eof()) { ++i; config >> line[0]; tileSize = atoi(line[0].c_str()); }
 
         /* cover art file paths */
         if (line[0].compare("art-path") == 0 || line[0].compare("art") == 0 || line[0].compare("art-file-path") == 0) {

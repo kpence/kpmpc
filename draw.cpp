@@ -18,7 +18,7 @@ void termDraw() {
 }
 
 /* main functions */
-Draw::Draw()//: w(128), h(128)
+Draw::Draw()
     { /* */ };
 
 Draw::~Draw() {};
@@ -60,13 +60,13 @@ void Draw::loop() {
 
 /* grid functions */
 int Draw::getWidth() {
-    if (sys == NULL || round((float)sys->app.getSize().x / TILE_SIZE_FLOAT) < 1)
+    if (sys == NULL || round((float)sys->app.getSize().x / sys->tileSize) < 1)
         return 1;
-    return round((float)sys->app.getSize().x / TILE_SIZE_FLOAT);
+    return round((float)sys->app.getSize().x / sys->tileSize);
 }
 
 int Draw::getHeight() {
-    if (sys == NULL || round((float)sys->app.getSize().y / TILE_SIZE_FLOAT) < 1)
+    if (sys == NULL || round((float)sys->app.getSize().y / sys->tileSize) < 1)
         return 1;
-    return round((float)sys->app.getSize().y / TILE_SIZE_FLOAT);
+    return round((float)sys->app.getSize().y / sys->tileSize);
 }

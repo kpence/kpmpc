@@ -28,6 +28,7 @@ public:
     std::vector<Map> map;
     std::vector<std::string> sl;
     std::vector<std::string> artPath;
+    int tileSize;
 
     /* main functions */
     Sys();

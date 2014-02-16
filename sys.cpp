@@ -102,6 +102,7 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
         case sf::Keyboard::Num9: str[0] = "9"; str[1] = "("; str[2] = "<c-9>"; str[3] = "<c-(>"; break;
         case sf::Keyboard::Num0: str[0] = "0"; str[1] = ")"; str[2] = "<c-0>"; str[3] = "<c-)>"; break;
         case sf::Keyboard::Space: str[0] = "<space>"; str[1] = "<s-space>"; str[2] = "<c-space>"; str[3] = "<c-s-space>"; break;
+        case sf::Keyboard::Escape: str[0] = "<esc>"; str[1] = "<s-esc>"; str[2] = "<c-esc>"; str[3] = "<c-s-esc>"; break;
         default: return true; break;
     }
     if (!ke->shift && !ke->control)
@@ -120,8 +121,12 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
     }
     testCmd(cmd);
     std::cout << cmd << std::endl;
-    if (cmd.find("<cr>") != std::string::npos)
+
+    bool find = false; for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) if (ii->str.find(cmd) == 0) find = true;
+
+    if (cmd.find("<cr>") != std::string::npos || !find)
         cmd = "";
+
     return true;
 }
 

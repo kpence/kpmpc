@@ -25,10 +25,10 @@ void Sys::build() {
 void Sys::buildMap() {
     Map m("<c-j>", "<cr>", false); map.push_back(m);
     m = Map("<enter>", "<cr>", false); map.push_back(m);
-    m = Map("h", ":mvcur -1,0<cr>", true); map.push_back(m);
-    m = Map("l", ":mvcur +1,0<cr>", true); map.push_back(m);
-    m = Map("j", ":mvcur 0,+1<cr>", true); map.push_back(m);
-    m = Map("k", ":mvcur 0,-1<cr>", true); map.push_back(m);
+    m = Map("h", ":mvcur<-1,0><cr>", true); map.push_back(m);
+    m = Map("l", ":mvcur<+1,0><cr>", true); map.push_back(m);
+    m = Map("j", ":mvcur<0,+1><cr>", true); map.push_back(m);
+    m = Map("k", ":mvcur<0,-1><cr>", true); map.push_back(m);
     m = Map("qq", ":quit<cr>", true); map.push_back(m);
     m = Map("ZZ", ":quit<cr>", true); map.push_back(m);
     m = Map("<c-c>", "<clear>", false); map.push_back(m);
@@ -36,13 +36,26 @@ void Sys::buildMap() {
     m = Map("<space>", ":play<cr>", true); map.push_back(m);
     m = Map("<cr>", ":play<cr>", true); map.push_back(m);
 
-    //std::ifstream config;
-    //std::string line;
-    //config.open("/home/kpence/.kpmpcrc");
-    //config >> line; std::cout << line << endl;
-    //config >> line; std::cout << line << endl;
-    //config >> line; std::cout << line << endl;
-    //config >> line; std::cout << line << endl;
+    std::ifstream config;
+    std::string line[3];
+    config.open("/home/kpence/.kpmpcrc");
+    int i = 0;
+    while (!config.eof()) {
+        Map m("", "", false);
+        if (!config.eof()) { ++i; config >> line[0]; }
+        if (!config.eof()) { ++i; config >> line[1]; }
+        if (!config.eof()) { ++i; config >> line[2]; }
+        if (i != 3) break;
+
+        m = Map(line[0], line[1], true);
+        std::cout << line[0] << std::endl;
+        std::cout << line[1] << std::endl;
+        std::cout << line[2] << std::endl;
+        if (line[2].compare("part") == 0) m.whole = false;
+        map.push_back(m);
+
+        i = 0; line[0] = ""; line[1] = ""; line[2] = "";
+    }
 }
 
 Sys::~Sys() {
@@ -153,23 +166,23 @@ bool Sys::remapCmd(std::string &_cmd) {
 }
 
 bool Sys::testCmd(std::string &_cmd) {
-    if (_cmd.compare(":mvcur 0,-1<cr>") == 0) {
+    if (_cmd.compare(":mvcur<0,-1><cr>") == 0) {
         if (floor((float)draw->sel / draw->getWidth()) > 0)
             draw->sel -= draw->getWidth();
         draw->sel = std::max(0, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
             draw->viewY--;
-    } else if (_cmd.compare(":mvcur 0,+1<cr>") == 0) {
+    } else if (_cmd.compare(":mvcur<0,+1><cr>") == 0) {
         draw->sel += draw->getWidth();
         draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
             draw->viewY++;
-    } else if (_cmd.compare(":mvcur +1,0<cr>") == 0) {
+    } else if (_cmd.compare(":mvcur<+1,0><cr>") == 0) {
         draw->sel++;
         draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
             draw->viewY++;
-    } else if (_cmd.compare(":mvcur -1,0<cr>") == 0) {
+    } else if (_cmd.compare(":mvcur<-1,0><cr>") == 0) {
         draw->sel -= 1;
         draw->sel = std::max(0, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)

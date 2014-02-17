@@ -10,6 +10,17 @@
 #define IS_GUI true
 #define DIR_BASE "/var/lib/mpd/music/"
 
+/* flags */
+#define HAS_FLAG(list, flag) ((list & flag) == flag)
+#define BIT_MASK(flags) ((1 << sizeof(flags)) - 1)
+enum sFlag {        S_ALBUM =       1 << 0,
+                    S_ARTIST =      1 << 1,
+                    S_TRACK =       1 << 2,
+                    S_GENRE =       1 << 3,
+                    S_YEAR =        1 << 4,
+                    S_REVERSE =     1 << 5,
+           };
+
 /* typedefs and enums */
 enum InputType {INPUT_KEYBOARD, INPUT_MOUSE, INPUT_JOYSTICK};
 enum modeType {MODE_NORMAL, MODE_TYPING_SEARCH};

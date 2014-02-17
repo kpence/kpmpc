@@ -15,7 +15,8 @@ void termSys() {
 }
 
 /* main functions */
-Sys::Sys(): app(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT), "kpmpc-1.0"), cmd(""), tileSize(0) {
+Sys::Sys(): app(sf::VideoMode(WIN_WIDTH, WIN_HEIGHT), "kpmpc-1.0"), cmd(""), tileSize(0), searchFlags(0) {
+    search = "";
 }
 
 void Sys::build() {
@@ -23,19 +24,6 @@ void Sys::build() {
 }
 
 void Sys::buildConfig() {
-    /*Map m("<c-j>", "<cr>", false); map.push_back(m);
-    m = Map("<enter>", "<cr>", false); map.push_back(m);
-    m = Map("h", ":mvcur<-1,0><cr>", true); map.push_back(m);
-    m = Map("l", ":mvcur<+1,0><cr>", true); map.push_back(m);
-    m = Map("j", ":mvcur<0,+1><cr>", true); map.push_back(m);
-    m = Map("k", ":mvcur<0,-1><cr>", true); map.push_back(m);
-    m = Map("qq", ":quit<cr>", true); map.push_back(m);
-    m = Map("ZZ", ":quit<cr>", true); map.push_back(m);
-    m = Map("<c-c>", "<clear>", false); map.push_back(m);
-    m = Map("<esc>", "<clear>", false); map.push_back(m);
-    m = Map("<space>", ":play<cr>", true); map.push_back(m);
-    m = Map("<cr>", ":play<cr>", true); map.push_back(m);*/
-
     std::ifstream config; config.open("/home/kpence/.kpmpcrc");
     std::string line[3];
     int i;
@@ -131,8 +119,12 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
         case sf::Keyboard::Num8: str[0] = "8"; str[1] = "&"; str[2] = "<c-8>"; str[3] = "<c-*>"; break;
         case sf::Keyboard::Num9: str[0] = "9"; str[1] = "("; str[2] = "<c-9>"; str[3] = "<c-(>"; break;
         case sf::Keyboard::Num0: str[0] = "0"; str[1] = ")"; str[2] = "<c-0>"; str[3] = "<c-)>"; break;
-        case sf::Keyboard::Space: str[0] = "<space>"; str[1] = "<s-space>"; str[2] = "<c-space>"; str[3] = "<c-s-space>"; break;
+        case sf::Keyboard::Return: str[0] = "<return>"; str[1] = "<s-return>"; str[2] = "<c-return>"; str[3] = "<c-s-return>"; break;
+        case sf::Keyboard::Space: str[0] = "<spacebar>"; str[1] = "<s-spacebar>"; str[2] = "<c-spacebar>"; str[3] = "<c-s-spacebar>"; break;
         case sf::Keyboard::Escape: str[0] = "<esc>"; str[1] = "<s-esc>"; str[2] = "<c-esc>"; str[3] = "<c-s-esc>"; break;
+        case sf::Keyboard::Dash: str[0] = "<->"; str[1] = "_"; str[2] = "<c-->"; str[3] = "<c-_>"; break;
+        case sf::Keyboard::Equal: str[0] = "="; str[1] = "+"; str[2] = "<c-=>"; str[3] = "<c-+>"; break;
+        case sf::Keyboard::Slash: str[0] = "/"; str[1] = "?"; str[2] = "<c-/>"; str[3] = "<c-?>"; break;
         default: return true; break;
     }
     if (!ke->shift && !ke->control)
@@ -145,14 +137,41 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
         cmd += str[3];
 
     remapCmd(cmd);
+
+    if (cmd.find("<space>") != std::string::npos)
+        if (cmd.find(":search<") == 0)
+            cmd.replace(cmd.find("<space>"), 7, " ");
+
+    if (cmd.find("<del-word-back>") != std::string::npos) {
+        cmd.erase(cmd.end() - 15, cmd.end());
+        do {
+            if (cmd.empty()) break;
+            cmd.erase(cmd.end() - 1, cmd.end());
+        } while (cmd[cmd.size() - 1] != '<' || cmd[cmd.size() - 1] != '>' || cmd[cmd.size() - 1] != '.' || cmd[cmd.size() - 1] != ' ');
+        return true;
+    }
+
+    if (cmd.find("<del-back>") != std::string::npos) {
+        cmd.erase(cmd.end() - 10, cmd.end());
+        if (cmd.find(":search<") == 0 && cmd.find(">") == cmd.size() - 1) cmd = "";
+        else {
+            if (cmd.size() < 1) cmd = "";
+            else cmd.erase(cmd.end() - 1, cmd.end());
+        }
+        std::cout << cmd << std::endl;
+        return true;
+    }
+
     if (cmd.find("<clear>") != std::string::npos) {
         cmd = "";
         return true;
     }
+
     testCmd(cmd);
     std::cout << cmd << std::endl;
 
     bool find = false; for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) if (ii->str.find(cmd) == 0) find = true;
+    if (cmd.find(":search<") == 0) find = true;
 
     if (cmd.find("<cr>") != std::string::npos || !find)
         cmd = "";
@@ -161,12 +180,9 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
 }
 
 bool Sys::isMap() {
-    for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) {
-        if ((!ii->whole && cmd.find(ii->str) != std::string::npos) || (ii->whole && cmd.compare(ii->str) == 0)) {
-            isRunning = false;
+    for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii)
+        if ((!ii->whole && cmd.find(ii->str) != std::string::npos) || (ii->whole && cmd.compare(ii->str) == 0))
             return true;
-        }
-    }
     return false;
 }
 
@@ -183,34 +199,57 @@ bool Sys::remapCmd(std::string &_cmd) {
 }
 
 bool Sys::testCmd(std::string &_cmd) {
+    /* select album above */
     if (_cmd.compare(":mvcur<0,-1><cr>") == 0) {
         if (floor((float)draw->sel / draw->getWidth()) > 0)
             draw->sel -= draw->getWidth();
         draw->sel = std::max(0, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
             draw->viewY--;
+
+    /* select album below */
     } else if (_cmd.compare(":mvcur<0,+1><cr>") == 0) {
         draw->sel += draw->getWidth();
         draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
         if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
             draw->viewY++;
+
+    /* select album to the right */
     } else if (_cmd.compare(":mvcur<+1,0><cr>") == 0) {
-        draw->sel++;
-        draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
-        if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
-            draw->viewY++;
+        selNext();
+
+    /* select album to the left */
     } else if (_cmd.compare(":mvcur<-1,0><cr>") == 0) {
-        draw->sel -= 1;
-        draw->sel = std::max(0, draw->sel);
-        if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
-            draw->viewY--;
+        selPrev();
+
+    /* quit game */
     } else if (_cmd.compare(":quit<cr>") == 0) {
         isRunning = false;
+
+    /* zoom out */
+    } else if (_cmd.compare(":art-size<-1><cr>") == 0) {
+        tileSize = std::max(8, tileSize - 1);
+
+    /* zoom in */
+    } else if (_cmd.compare(":art-size<+1><cr>") == 0) {
+        tileSize = std::min(320, tileSize + 1);
+
+    /* search next */
+    } else if (_cmd.find(":search-next<cr>") == 0) {
+        searchNext(search, searchFlags, false);
+
+    /* search */
+    } else if (_cmd.find(":search<album+artist>") == 0 || _cmd.find(":search<artist+album>") == 0) {
+        if (_cmd.find("<cr>") == std::string::npos) {
+            search = _cmd; search.erase(0, _cmd.find(">") + 1);
+            searchNext(search, S_ALBUM | S_ARTIST, true);
+        }
+
+    /* play selected album */
     } else if (_cmd.compare(":play<cr>") == 0) {
         mpd_run_clear(mpd->conn);
         addAlbum(mpd->album[draw->sel].name.c_str());
-        for (std::vector<std::string>::iterator ii = sl.begin(); ii != sl.end(); ++ii)
-            mpd_run_add(mpd->conn, ii->c_str());
+        for (std::vector<std::string>::iterator ii = sl.begin(); ii != sl.end(); ++ii) mpd_run_add(mpd->conn, ii->c_str());
         mpd_run_play(mpd->conn);
     }
     std::cout << "sel: " << draw->sel << ", " << draw->getWidth() << std::endl;
@@ -243,4 +282,47 @@ bool Sys::addAlbum(const char *a) {
 void Sys::sortAlbums(mpd_tag_type type) {
     std::cout << "" << std::endl;
     std::sort(mpd->album.begin(), mpd->album.end(), helper_sort);
+}
+
+/* search/sel functions */
+void Sys::searchNext(std::string _search, int _flags, bool realTime, bool wrap) {
+    std::cout << "Searching for: " << _search << std::endl;
+    search = _search;
+    searchFlags = _flags;
+    bool suc = true;
+    if (!HAS_FLAG(_flags, S_REVERSE)) {
+        int _sel = draw->sel;
+        if (!realTime) _sel++;
+        do {
+            if (_sel == draw->sel) { suc = false; break; }
+            if (mpd->album[_sel].name.find(_search) != std::string::npos || mpd->album[_sel].artist.find(_search) != std::string::npos) { break; }
+            _sel += 1;
+            while (_sel >= (signed)mpd->album.size()) _sel -= mpd->album.size();
+            while (_sel < 0) _sel += mpd->album.size();
+            if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY)) draw->viewY++;
+        } while (true);
+
+        if (suc) draw->sel = _sel;
+
+    } else {
+    }
+}
+
+void Sys::selPrev(bool wrap) {
+    draw->sel--;
+    if (wrap) {
+        while (draw->sel >= (signed)mpd->album.size()) draw->sel -= mpd->album.size();
+        while (draw->sel < 0) draw->sel += mpd->album.size();
+    } else
+    draw->sel = std::max(0, draw->sel);
+}
+
+void Sys::selNext(bool wrap) {
+    draw->sel++;
+    if (wrap) {
+        while (draw->sel >= (signed)mpd->album.size()) draw->sel -= mpd->album.size();
+        while (draw->sel < 0) draw->sel += mpd->album.size();
+    } else
+    draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
+    if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY)) draw->viewY++;
 }

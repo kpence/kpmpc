@@ -1,1 +1,40 @@
-/home/kpence/.kpmpcrc
+# This is the default template ~/.kpmpcrc, kpmpc's config file
+
+# various settings
+
+# default keyboard mappings
+map h :mvcur<-1,0><cr> w
+map l :mvcur<+1,0><cr> w
+map k :mvcur<0,-1><cr> w
+map j :mvcur<0,+1><cr> w
+
+map <cr> :play<cr> w
+map p :play<cr> w
+
+map <c-j> <cr> p
+map <return> <cr> p
+
+map <c-c> <clear> p
+map <esc> <clear> p
+
+map qq :quit<cr> w
+map ZZ :quit<cr> w
+
+map / :search<artist+album> w
+map n :search-next<cr> w
+
+map <c-h> <del-back> p
+map <c-w> <del-word-back> p
+
+map <spacebar> <space> p
+
+# default cover art size
+art-size 128
+
+# default cover art file paths
+art front.jpg
+art front.png
+art cover.jpg
+art cover.png
+art folder.jpg
+art folder.png

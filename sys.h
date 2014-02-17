@@ -25,10 +25,12 @@ public:
     sf::RenderWindow app;
     sf::Event event;
     std::string cmd;
+    std::string search;
     std::vector<Map> map;
     std::vector<std::string> sl;
     std::vector<std::string> artPath;
     int tileSize;
+    int searchFlags;
 
     /* main functions */
     Sys();
@@ -49,5 +51,10 @@ public:
     void sortAlbums(mpd_tag_type type);
 
     /* grid functions */
+
+    /* search/sel functions */
+    void searchNext(std::string _search, int _flags, bool realTime, bool wrap = true);
+    void selNext(bool wrap = false);
+    void selPrev(bool wrap = false);
 } _sys;
 Sys *sys;

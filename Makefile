@@ -26,12 +26,6 @@ $(BIN): $(OBJS)
 .cpp.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
-install: all
-	if [ ! -f "~/.kpmpcrc" ]; then
-		cp ./default.kpmpcrc ~/.kpmpcrc
-		cp ./${BIN} ${BIN_DIR}
-	fi
-
 clean:
 	$(RM) *.o *~ $(BIN)
 

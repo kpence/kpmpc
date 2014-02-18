@@ -150,7 +150,8 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
     }
 
     /* finds number of characters of vim-style number prefixes (and stops if that's all that has been typed) */
-    unsigned int f; for (f = 0; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
+    unsigned int f = 0; for (; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
+    if (cmd.size() == f && ke != NULL) { std::cout << cmd << std::endl; return true; }
 
     /* applies all command remappings */
     remapCmd(cmd);
@@ -217,6 +218,7 @@ bool Sys::isMap() {
 
 bool Sys::remapCmd(std::string &_cmd) {
     unsigned int f; for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++);
+    if (_cmd.size() == f) return true;
 
     do {
         for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) {

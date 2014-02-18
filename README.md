@@ -10,8 +10,8 @@ Configuration is in the file ~/.kpmpcrc, the defaults template configuration is 
 
 ### Configuration options
 
-#### \# <comment/annotations> -- Specifies a string of commands that will be automatically performed when the program is started
+\# <comment/annotations> -- Specifies a string of commands that will be automatically performed when the program is started
 
-#### do <string of commands> -- Specifies a string of commands that will be automatically performed when the program is started
+do <string of commands> -- Specifies a string of commands that will be automatically performed when the program is started
 
-##### Example: do :play<cr>
+map <a string of commands> <a string of commands that the previous string of commands would be remapped to>

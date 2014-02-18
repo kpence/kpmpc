@@ -145,7 +145,6 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
 
     /* finds number of characters of vim-style number prefixes (and stops if that's all that has been typed) */
     unsigned int f; for (f = 0; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
-    if (f == cmd.size()) return true;
 
     /* applies all command remappings */
     remapCmd(cmd);
@@ -180,7 +179,7 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
     /* clear */
     if (cmd.find("<clear>") != std::string::npos) {
         cmd = "";
-        std::cout << "<clear>" << std::endl;
+        std::cout << "<clear> (Clearing cmd string)" << std::endl;
         return true;
     }
 
@@ -212,7 +211,6 @@ bool Sys::isMap() {
 
 bool Sys::remapCmd(std::string &_cmd) {
     unsigned int f; for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++);
-    std::cout << f << std::endl;
 
     do {
         for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) {
@@ -226,23 +224,28 @@ bool Sys::remapCmd(std::string &_cmd) {
 }
 
 bool Sys::testCmd(std::string &_cmd) {
+    /* stops if nothing in cmd string, and declare argument variables */
     if (_cmd != "" && !_cmd.empty()) std::cout << _cmd << std::endl;
     std::string arg[5];
-    int num;
+    int num = 0;
 
     /* finds the prefix number argument */
-    int f;
-    for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++) arg[0] += _cmd[f];
-    unsigned int nSize = (unsigned)f; num = atoi(_cmd.substr(0, f).c_str());
+    int f; arg[0] = ""; for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++) arg[0] += _cmd[f];
+    unsigned int nSize = (unsigned)f;
+    if (arg[0] == "") nSize = 0;
+    if (nSize > 0) num = atoi(_cmd.substr(0, f).c_str());
+
+    /* makes sure the commands are valid */
+    if (_cmd.find(":") != nSize || _cmd.find("<cr>") == std::string::npos) return true;
 
     /* finds the arguments */
     f = 1;
-    if (_cmd.find(":") == arg[0].size() && _cmd.find("<") != _cmd.find("<cr>"))
-        for (int i = 1; i < 10; i++) {
-            if (_cmd[_cmd.find("<") + i] == ',') { f++; continue; }
-            if (_cmd[_cmd.find("<") + i] == '>') { break; }
-            arg[f] += _cmd[_cmd.find("<") + i];
-        }
+    if (_cmd.find("<") != _cmd.find("<cr>"))
+    for (int i = 1; i < 10; i++) {
+        if (_cmd[_cmd.find("<") + i] == ',') { f++; continue; }
+        if (_cmd[_cmd.find("<") + i] == '>') { break; }
+        arg[f] += _cmd[_cmd.find("<") + i];
+    }
 
     /* select album above */
     if (_cmd.find(":mvcur") == nSize) {
@@ -268,7 +271,8 @@ bool Sys::testCmd(std::string &_cmd) {
         }
 
     /* quit game */
-    } else if (_cmd.find(":quit<cr>") == nSize) {
+    } else if (_cmd.find(":quit") == nSize) {
+        std::cout << "Quiting program" << std::endl;
         isRunning = false;
 
     /* zoom out */

@@ -15,7 +15,7 @@ public:
     /* variables */
     unsigned int viewY;
     int sel;
-    //int w,h;
+    sf::Font font;
     sf::View view;
 
     /* main functions */
@@ -47,5 +47,7 @@ public:
     int getHeight();
 
     /* draw */
+    void drawAlbums();
+    void drawStatus();
 } _draw;
 Draw *draw;

@@ -24,8 +24,7 @@ void Sys::build() {
 }
 
 void Sys::buildConfig() {
-    std::string s;
-    s = getenv("HOME");
+    std::string s = getenv("HOME");
     s += "/.kpmpcrc";
     std::ifstream config; config.open(s.c_str());
     std::string line[3];

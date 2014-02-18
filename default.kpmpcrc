@@ -7,6 +7,7 @@ map h :mvcur<-1,0><cr> w
 map l :mvcur<+1,0><cr> w
 map k :mvcur<0,-1><cr> w
 map j :mvcur<0,+1><cr> w
+map <c-d> jjjjj w
 
 map <cr> :play<cr> w
 map p :play<cr> w
@@ -22,7 +23,9 @@ map ZZ :quit<cr> w
 
 map / :search<artist+album> w
 map n :search-next<cr> w
+map N :search-prev<cr> w
 
+map <backspace> <del-back> p
 map <c-h> <del-back> p
 map <c-w> <del-word-back> p
 

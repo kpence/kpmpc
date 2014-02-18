@@ -93,7 +93,7 @@ void Draw::drawStatus() {
 
     /* initialize text object */
     sf::Text text(st, font);
-    text.setColor(sf::Color(255, 0, 0));
+    text.setColor(sf::Color(255, 255, 255));
     text.setPosition(10, WIN_HEIGHT - (WIN_HEIGHT - (sys->app.getSize().y / 18) - 540));
     text.setScale(WIN_WIDTH / 100, WIN_HEIGHT / 100);
     text.scale(1000 / (sys->app.getSize().x / 2), 1000 / (sys->app.getSize().y / 2));

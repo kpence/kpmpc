@@ -143,12 +143,19 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
             cmd += str[3];
     }
 
+    /* finds number of characters of vim-style number prefixes (and stops if that's all that has been typed) */
+    unsigned int f; for (f = 0; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
+    if (f == cmd.size()) return true;
+
+    /* applies all command remappings */
     remapCmd(cmd);
 
+    /* insert space in text field (such as when searching for artists) */
     if (cmd.find("<space>") != std::string::npos)
-        if (cmd.find(":search<") == 0)
+        if (cmd.find(":search<") == f)
             cmd.replace(cmd.find("<space>"), 7, " ");
 
+    /* delete word back */
     if (cmd.find("<del-word-back>") != std::string::npos) {
         cmd.erase(cmd.end() - 15, cmd.end());
         do {
@@ -158,9 +165,10 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
         return true;
     }
 
+    /* delete character back */
     if (cmd.find("<del-back>") != std::string::npos) {
         cmd.erase(cmd.end() - 10, cmd.end());
-        if (cmd.find(":search<") == 0 && cmd.find(">") == cmd.size() - 1) cmd = "";
+        if (cmd.find(":search<") == f && cmd.find(">") == cmd.size() - 1) cmd = "";
         else {
             if (cmd.size() < 1) cmd = "";
             else cmd.erase(cmd.end() - 1, cmd.end());
@@ -169,36 +177,46 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
         return true;
     }
 
+    /* clear */
     if (cmd.find("<clear>") != std::string::npos) {
         cmd = "";
         std::cout << "<clear>" << std::endl;
         return true;
     }
 
+    /* does : commands */
     testCmd(cmd);
 
-    if (cmd.find("<cr>") != std::string::npos) { cmd.erase(0, cmd.find("<cr>") + 4); onKeyPress(NULL); }
+    /* handles <cr> delimiter, calls this entire function again for each time a command delimited by <cr> happens */
+    if (cmd.find("<cr>") != std::string::npos) { cmd.erase(0, cmd.find("<cr>") + 4); onKeyPress(NULL); } if (cmd.empty()) cmd = "";
 
-    if (cmd.empty()) cmd = "";
-
-    bool find = false; for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) if (ii->str.find(cmd) == 0) find = true;
-    if (cmd.find(":search<") == 0) find = true;
+    /* checks if key mapping is possible */
+    bool find = false;
+    if (cmd.find(":search<") == f) find = true; else
+    for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) if (ii->str.find(cmd) == 0) find = true;
     if (!find) cmd = "";
 
+    /* done */
     return true;
 }
 
 bool Sys::isMap() {
+    unsigned int f; for (f = 0; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
+    if (cmd.size() == f) return false;
+
     for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii)
-        if ((!ii->whole && cmd.find(ii->str) != std::string::npos) || (ii->whole && cmd.find(ii->str) == 0))
+        if ((!ii->whole && cmd.find(ii->str) != std::string::npos) || (ii->whole && cmd.find(ii->str) == f))
             return true;
     return false;
 }
 
 bool Sys::remapCmd(std::string &_cmd) {
+    unsigned int f; for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++);
+    std::cout << f << std::endl;
+
     do {
         for (std::vector<Map>::iterator ii = map.begin(); ii != map.end(); ++ii) {
-            if ((!ii->whole && _cmd.find(ii->str) != std::string::npos) || (ii->whole && _cmd.find(ii->str) == 0)) {
+            if ((!ii->whole && _cmd.find(ii->str) != std::string::npos) || (ii->whole && _cmd.find(ii->str) == f)) {
                 std::cout << ii->str << " --> ";
                 _cmd.replace(_cmd.find(ii->str), ii->str.length(), ii->remap);
             }
@@ -208,59 +226,76 @@ bool Sys::remapCmd(std::string &_cmd) {
 }
 
 bool Sys::testCmd(std::string &_cmd) {
-    std::cout << _cmd << std::endl;
+    if (_cmd != "" && !_cmd.empty()) std::cout << _cmd << std::endl;
+    std::string arg[5];
+    int num;
+
+    /* finds the prefix number argument */
+    int f;
+    for (f = 0; _cmd[f] == '0' || _cmd[f] == '1' || _cmd[f] == '2' || _cmd[f] == '3' || _cmd[f] == '4' || _cmd[f] == '5' || _cmd[f] == '6' || _cmd[f] == '7' || _cmd[f] == '8' || _cmd[f] == '9'; f++) arg[0] += _cmd[f];
+    unsigned int nSize = (unsigned)f; num = atoi(_cmd.substr(0, f).c_str());
+
+    /* finds the arguments */
+    f = 1;
+    if (_cmd.find(":") == arg[0].size() && _cmd.find("<") != _cmd.find("<cr>"))
+        for (int i = 1; i < 10; i++) {
+            if (_cmd[_cmd.find("<") + i] == ',') { f++; continue; }
+            if (_cmd[_cmd.find("<") + i] == '>') { break; }
+            arg[f] += _cmd[_cmd.find("<") + i];
+        }
+
     /* select album above */
-    if (_cmd.find(":mvcur<0,-1><cr>") == 0) {
-        if (floor((float)draw->sel / draw->getWidth()) > 0)
-            draw->sel -= draw->getWidth();
-        draw->sel = std::max(0, draw->sel);
-        if (floor((float)draw->sel / draw->getWidth()) < draw->viewY)
-            draw->viewY--;
+    if (_cmd.find(":mvcur") == nSize) {
+        for (int foo = 0; foo < std::max(1, num); foo++) {
+            if (arg[2].compare("-1") == 0) {
 
-    /* select album below */
-    } else if (_cmd.find(":mvcur<0,+1><cr>") == 0) {
-        draw->sel += draw->getWidth();
-        draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
-        if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY))
-            draw->viewY++;
+                if (floor((float)draw->sel / draw->getWidth()) > 0) draw->sel -= draw->getWidth();
+                draw->sel = std::max(0, draw->sel);
+                if (floor((float)draw->sel / draw->getWidth()) < draw->viewY) draw->viewY--;
+                if (draw->sel <= 0) break;
 
-    /* select album to the right */
-    } else if (_cmd.find(":mvcur<+1,0><cr>") == 0) {
-        selNext();
+            } else if (arg[2].compare("+1") == 0) {
 
-    /* select album to the left */
-    } else if (_cmd.find(":mvcur<-1,0><cr>") == 0) {
-        selPrev();
+                draw->sel += draw->getWidth();
+                draw->sel = std::min((int)mpd->album.size() - 1, draw->sel);
+                if (floor((float)draw->sel / draw->getWidth()) >= (draw->getHeight() + draw->viewY)) draw->viewY++;
+                if (draw->sel >= (int)mpd->album.size() - 1) break;
+
+            }
+
+            if (arg[1].compare("-1") == 0) { selPrev(); if (draw->sel <= 0) break; }
+            if (arg[1].compare("+1") == 0) { selNext(); if (draw->sel >= (int)mpd->album.size() - 1) break; }
+        }
 
     /* quit game */
-    } else if (_cmd.find(":quit<cr>") == 0) {
+    } else if (_cmd.find(":quit<cr>") == nSize) {
         isRunning = false;
 
     /* zoom out */
-    } else if (_cmd.find(":art-size<-1><cr>") == 0) {
+    } else if (_cmd.find(":art-size<-1><cr>") == nSize) {
         tileSize = std::max(8, tileSize - 1);
 
     /* zoom in */
-    } else if (_cmd.find(":art-size<+1><cr>") == 0) {
+    } else if (_cmd.find(":art-size<+1><cr>") == nSize) {
         tileSize = std::min(320, tileSize + 1);
 
     /* search next */
-    } else if (_cmd.find(":search-next<cr>") == 0) {
+    } else if (_cmd.find(":search-next<cr>") == nSize) {
         searchNext(search, searchFlags, false);
 
     /* search next */
-    } else if (_cmd.find(":search-prev<cr>") == 0) {
+    } else if (_cmd.find(":search-prev<cr>") == nSize) {
         searchNext(search, searchFlags | S_REVERSE, false);
 
     /* search */
-    } else if (_cmd.find(":search<album+artist>") == 0 || _cmd.find(":search<artist+album>") == 0) {
+    } else if (_cmd.find(":search<album+artist>") == nSize || _cmd.find(":search<artist+album>") == nSize) {
         if (_cmd.find("<cr>") == std::string::npos) {
             search = _cmd; search.erase(0, _cmd.find(">") + 1);
             searchNext(search, S_ALBUM | S_ARTIST, true);
         }
 
     /* play selected album */
-    } else if (_cmd.find(":play<cr>") == 0) {
+    } else if (_cmd.find(":play<cr>") == nSize) {
         mpd_run_clear(mpd->conn);
         addAlbum(mpd->album[draw->sel].name.c_str());
         for (std::vector<std::string>::iterator ii = sl.begin(); ii != sl.end(); ++ii) mpd_run_add(mpd->conn, ii->c_str());

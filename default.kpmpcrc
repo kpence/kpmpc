@@ -1,14 +1,12 @@
 # This is the default template ~/.kpmpcrc, kpmpc's config file
-
-# various settings
+#
+# A list of config options in README
 
 # default keyboard mappings
 map h :mvcur<-1,0><cr> w
 map l :mvcur<+1,0><cr> w
 map k :mvcur<0,-1><cr> w
 map j :mvcur<0,+1><cr> w
-map <c-d> jjjjj w
-map <c-u> 5j w
 
 map <cr> :play<cr> w
 map p :play<cr> w

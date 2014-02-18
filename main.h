@@ -9,6 +9,7 @@
 #define ALBUM_WIN_HEIGHT_FLOAT (WIN_HEIGHT_FLOAT - 48.f)
 #define IS_GUI true
 #define DIR_BASE "/var/lib/mpd/music/"
+#define CONFIG_DIR "/var/lib/mpd/music/"
 
 /* flags */
 #define HAS_FLAG(list, flag) ((list & flag) == flag)

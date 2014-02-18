@@ -40,6 +40,12 @@ void Sys::buildConfig() {
         /* comment */
         if (line[0][0] == '#') while (config.get() != '\n');
 
+        /* commands automatically entered on startup */
+        if (line[0].compare("do") == 0) {
+            if (!config.eof()) { ++i; config >> line[0]; }
+            cmd += line[0];
+        }
+
         /* cover art tile size */
         if (line[0].compare("tile-size") == 0 || line[0].compare("art-size") == 0 || line[0].compare("art-tile-size") == 0)
             if (!config.eof()) { ++i; config >> line[0]; tileSize = atoi(line[0].c_str()); }
@@ -275,13 +281,12 @@ bool Sys::testCmd(std::string &_cmd) {
         std::cout << "Quiting program" << std::endl;
         isRunning = false;
 
-    /* zoom out */
-    } else if (_cmd.find(":art-size<-1><cr>") == nSize) {
-        tileSize = std::max(8, tileSize - 1);
-
-    /* zoom in */
-    } else if (_cmd.find(":art-size<+1><cr>") == nSize) {
-        tileSize = std::min(320, tileSize + 1);
+    /* zoom in/out */
+    } else if (_cmd.find(":art-size") == nSize) {
+        if (arg[1].compare("-1"))
+            tileSize = std::min(320, (std::max(8, tileSize - 1)));
+        else if (arg[1].compare("+1"))
+            tileSize = std::min(320, (std::max(8, tileSize + 1)));
 
     /* search next */
     } else if (_cmd.find(":search-next<cr>") == nSize) {

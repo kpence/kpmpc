@@ -44,6 +44,9 @@ int main(int argc, char **argv) {
     if (!initAlbum())
         return -1;
 
+    /* perform startup commands specified in ~/.kpmpcrc config file */
+    if (sys->cmd != "" && !sys->cmd.empty()) { sys->onKeyPress(NULL); }
+
     /* loop */
     while (isRunning) {
         if (!loopSys())

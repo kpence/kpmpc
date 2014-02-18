@@ -7,7 +7,6 @@ map h :mvcur<-1,0><cr> w
 map l :mvcur<+1,0><cr> w
 map k :mvcur<0,-1><cr> w
 map j :mvcur<0,+1><cr> w
-map <c-d> llll w
 
 map <cr> :play<cr> w
 map p :play<cr> w
@@ -21,7 +20,7 @@ map <esc> <clear> p
 map qq :quit<cr> w
 map ZZ :quit<cr> w
 
-map / :search<artist+album> w
+map / :search<artist,album> w
 map n :search-next<cr> w
 map N :search-prev<cr> w
 
@@ -41,3 +40,6 @@ art cover.jpg
 art cover.png
 art folder.jpg
 art folder.png
+
+# These mappings are for testing
+map <c-d> llll w

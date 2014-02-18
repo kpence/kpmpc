@@ -42,7 +42,7 @@ int Draw::getWidth() {
 }
 
 int Draw::getHeight() {
-    if (sys == NULL || round((float)sys->app.getSize().y / sys->tileSize) < 1)
+    if (sys == NULL || round(((float)sys->app.getSize().y - 32) / sys->tileSize) < 1)
         return 1;
     return round((float)sys->app.getSize().y / sys->tileSize);
 }
@@ -55,7 +55,7 @@ void Draw::drawAlbums() {
 
             w = mpd->album[ii].tex.getSize().x;
             h = mpd->album[ii].tex.getSize().y - 32;
-            x = (WIN_WIDTH_FLOAT - 32) / getWidth();
+            x = (WIN_WIDTH_FLOAT) / getWidth();
             y = (WIN_HEIGHT_FLOAT - 32) / getHeight();
 
         if (ii == (unsigned int)sel)

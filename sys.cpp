@@ -150,7 +150,7 @@ bool Sys::onKeyPress(sf::Event::KeyEvent *ke) {
 
     /* finds number of characters of vim-style number prefixes (and stops if that's all that has been typed) */
     unsigned int f = 0; for (; cmd[f] == '0' || cmd[f] == '1' || cmd[f] == '2' || cmd[f] == '3' || cmd[f] == '4' || cmd[f] == '5' || cmd[f] == '6' || cmd[f] == '7' || cmd[f] == '8' || cmd[f] == '9'; f++);
-    if (cmd.size() == f && ke != NULL) { std::cout << cmd << std::endl; return true; }
+    if (cmd.size() == f && ke != NULL) { std::cout << cmd; return true; }
 
     /* applies all command remappings */
     remapCmd(cmd);
@@ -234,6 +234,7 @@ bool Sys::testCmd(std::string &_cmd) {
     /* stops if nothing in cmd string, and declare argument variables */
     if (_cmd != "" && !_cmd.empty()) std::cout << _cmd << std::endl;
     std::string arg[5];
+    int argNum = 1;
     int num = 0;
 
     /* finds the prefix number argument */
@@ -252,10 +253,11 @@ bool Sys::testCmd(std::string &_cmd) {
         if (_cmd[_cmd.find("<") + i] == ',') { f++; continue; }
         if (_cmd[_cmd.find("<") + i] == '>') { break; }
         arg[f] += _cmd[_cmd.find("<") + i];
+        argNum = f;
     }
 
     /* select album above */
-    if (_cmd.find(":mvcur") == nSize) {
+    if (_cmd.find(":mvcur<") == nSize) {
         for (int foo = 0; foo < std::max(1, num); foo++) {
             if (arg[2].compare("-1") == 0) {
 
@@ -298,11 +300,22 @@ bool Sys::testCmd(std::string &_cmd) {
         searchNext(search, searchFlags | S_REVERSE, false);
 
     /* search */
-    } else if (_cmd.find(":search<album+artist>") == nSize || _cmd.find(":search<artist+album>") == nSize) {
-        if (_cmd.find("<cr>") == std::string::npos) {
-            search = _cmd; search.erase(0, _cmd.find(">") + 1);
-            searchNext(search, S_ALBUM | S_ARTIST, true);
+    } else if (_cmd.find(":search<") == nSize) {
+
+        searchFlags = 0;
+        for (int ff = 0; ff < argNum; ff++) {
+            if (arg[ff].compare("album") == 0) searchFlags = searchFlags | S_ALBUM;
+            else if (arg[ff].compare("artist") == 0) searchFlags = searchFlags | S_ARTIST;
+            else if (arg[ff].compare("genre") == 0) searchFlags = searchFlags | S_GENRE;
         }
+        search = _cmd; search.erase(0, _cmd.find(">") + 1); search.erase(search.find("<cr>"), search.size());
+        searchNext(search, searchFlags, false);
+
+    /* add selected album */
+    } else if (_cmd.find(":add<cr>") == nSize) {
+        addAlbum(mpd->album[draw->sel].name.c_str());
+        for (std::vector<std::string>::iterator ii = sl.begin(); ii != sl.end(); ++ii) mpd_run_add(mpd->conn, ii->c_str());
+        mpd_run_play(mpd->conn);
 
     /* play selected album */
     } else if (_cmd.find(":play<cr>") == nSize) {
@@ -310,6 +323,7 @@ bool Sys::testCmd(std::string &_cmd) {
         addAlbum(mpd->album[draw->sel].name.c_str());
         for (std::vector<std::string>::iterator ii = sl.begin(); ii != sl.end(); ++ii) mpd_run_add(mpd->conn, ii->c_str());
         mpd_run_play(mpd->conn);
+
     }
     return true;
 }

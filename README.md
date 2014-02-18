@@ -4,6 +4,8 @@ This program is really unfinished, I started rewriting it.
 
 This program requires a ~/.kpmpcrc, the defaults are in ./default.kpmpcrc
 
+It also requires a ~/.local/share/kpmpc/arial.ttf which alos has to be manually installed.
+
 ## Configuration
 
 Configuration is in the file ~/.kpmpcrc, the defaults template configuration is in ./default.kpmpcrc.

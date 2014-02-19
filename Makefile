@@ -20,6 +20,9 @@ OBJS = $(SRCS:.cpp=.o)
 
 all: $(BIN)
 
+install: all
+	./install.sh
+
 $(BIN): $(OBJS)
 	$(CC) $(CFLAGS) -o $(BIN) $(OBJS) $(LIBS)
 

@@ -6,6 +6,18 @@ This program requires a ~/.kpmpcrc, the defaults are in ./default.kpmpcrc
 
 It also requires a ~/.local/share/kpmpc/arial.ttf which alos has to be manually installed.
 
+### How to install
+
+In order to compile and install this program, type this in the directory that contains the Makefile:
+
+$ make install
+
+or
+
+$ make clean install
+
+
+
 ## Configuration
 
 Configuration is in the file ~/.kpmpcrc, the defaults template configuration is in ./default.kpmpcrc.

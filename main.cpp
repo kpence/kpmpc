@@ -1,7 +1,7 @@
-/* TODO Make albums sort by year instead of alphabetically
- *
+/*
+
  * KPMPC see LICENSE for copyright information (MIT license)
- * In order for this to work I think you'll need mpdclient and SFML 1.6
+ * In order for this to work I think you'll need libmpdclient and SFML 2.0
 */
 
 /* includes */
